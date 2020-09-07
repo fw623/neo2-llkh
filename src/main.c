@@ -68,9 +68,12 @@ bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
 bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
-Tap capsLockTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
 bool mod3RAsReturn = false;          // if true, hitting Mod3R alone sends Return
-Tap mod3RTap[] = {
+bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
+Tap mod3LTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
+Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
+Tap mod3RTap = {.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}};
+Tap mod4RTap[] = {
 	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ß
 	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ẞ (TODO:)
 	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ? (TODO:)
@@ -78,8 +81,6 @@ Tap mod3RTap[] = {
 	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
 	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
 };
-bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
-Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
 
 /**
  * True if no mapping should be done
@@ -99,6 +100,7 @@ bool level3modRightPressed = false;
 bool level3modLeftAndNoOtherKeyPressed = false;
 bool level3modRightAndNoOtherKeyPressed = false;
 bool level4modLeftAndNoOtherKeyPressed = false;
+bool level4modRightAndNoOtherKeyPressed = false;
 
 bool level4modLeftPressed = false;
 bool level4modRightPressed = false;
@@ -817,15 +819,15 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 			modState->mod3 = level3modLeftPressed | level3modRightPressed;
 			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_R
-				sendDownUp(VK_RETURN, 28, true); // send Return
+				sendDownUp2(mod3RTap.code);											 // send Return
 				level3modRightAndNoOtherKeyPressed = false;
 			}
 		} else { // scanCodeMod3L (CapsLock)
 			level3modLeftPressed = false;
 			modState->mod3 = level3modLeftPressed | level3modRightPressed;
 			if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
-				sendUp(VK_CAPITAL, 58, false); // release Mod3_R
-				sendDownUp(VK_ESCAPE, 1, true); // send Escape
+				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_L
+				sendDownUp2(mod3LTap.code); 										 // send Backspace
 				level3modLeftAndNoOtherKeyPressed = false;
 			}
 		}
@@ -987,6 +989,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		level3modLeftAndNoOtherKeyPressed = false;
 		level3modRightAndNoOtherKeyPressed = false;
 		level4modLeftAndNoOtherKeyPressed = false;
+		level4modRightAndNoOtherKeyPressed = false;
 
 		bool callNext = updateStatesAndWriteKey(keyInfo, &modState, false);
 		if (!callNext) return -1;
