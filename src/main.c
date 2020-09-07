@@ -58,9 +58,8 @@ bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
 bool returnAsMod3R = false;          // use return as right level 3 modifier
 bool tabAsMod4L = false;             // use tab as left level 4 modifier
 DWORD scanCodeMod3L = SCANCODE_CAPSLOCK_KEY;
-DWORD scanCodeMod3R = SCANCODE_HASH_KEY;       // depends on quoteAsMod3R and returnAsMod3R
+DWORD scanCodeMod4R = SCANCODE_HASH_KEY;       // depends on quoteAsMod3R and returnAsMod3R
 DWORD scanCodeMod4L = SCANCODE_LOWER_THAN_KEY; // depends on tabAsMod4L
-// DWORD scanCodeMod4R = SCANCODE_ANY_ALT_KEY;
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
 bool level4LockEnabled = false;      // enable (allow) level 4 lock (toggle by pressing both Mod4 keys at the same time)
@@ -607,14 +606,12 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.scanCode == scanCodeMod3L
-			|| keyInfo.scanCode == scanCodeMod3R;
+	return keyInfo.scanCode == scanCodeMod3L || keyInfo.vkCode == VK_RMENU;
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.scanCode == scanCodeMod4L
-			|| keyInfo.vkCode == VK_RMENU;
+	return keyInfo.scanCode == scanCodeMod4L || keyInfo.scanCode == scanCodeMod4R;
 }
 
 bool isSystemKeyPressed()
@@ -815,7 +812,7 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 
 void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 	if (isKeyUp) {
-		if (keyInfo.scanCode == scanCodeMod3R) {
+		if (keyInfo.vkCode == VK_RMENU) {
 			level3modRightPressed = false;
 			modState->mod3 = level3modLeftPressed | level3modRightPressed;
 			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
@@ -835,10 +832,15 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 	}
 
 	else { // keyDown
-		if (keyInfo.scanCode == scanCodeMod3R) {
+		if (keyInfo.vkCode == VK_RMENU) {
 			level3modRightPressed = true;
 			if (mod3RAsReturn)
 				level3modRightAndNoOtherKeyPressed = true;
+
+			/* ALTGR triggers two keys: LCONTROL and RMENU
+				we don't want to have any of those two here effective but return -1 seems
+				to change nothing, so we simply send keyup here.  */
+			sendUp(VK_RMENU, 56, false);
 		} else { // VK_CAPITAL (CapsLock)
 			level3modLeftPressed = true;
 			if (capsLockAsEscape)
@@ -880,10 +882,6 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 				level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
 		} else { // scanCodeMod4R
 			level4modRightPressed = true;
-			/* ALTGR triggers two keys: LCONTROL and RMENU
-					we don't want to have any of those two here effective but return -1 seems
-					to change nothing, so we simply send keyup here.  */
-			sendUp(VK_RMENU, 56, false);
 		}
 		modState->mod4 = level4modLeftPressed | level4modRightPressed;
 	}
@@ -1259,11 +1257,11 @@ int main(int argc, char *argv[])
 
 	if (quoteAsMod3R)
 		// use ä/quote key instead of #/backslash key as right level 3 modifier
-		scanCodeMod3R = SCANCODE_QUOTE_KEY;
+		scanCodeMod4R = SCANCODE_QUOTE_KEY;
 	else if (returnAsMod3R)
 		// use return key instead of #/backslash as right level 3 modifier
 		// (might be useful for US keyboards because the # key is missing there)
-		scanCodeMod3R = SCANCODE_RETURN_KEY;
+		scanCodeMod4R = SCANCODE_RETURN_KEY;
 
 	if (tabAsMod4L)
 		// use tab key instead of < key as left level 4 modifier
