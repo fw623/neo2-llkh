@@ -427,13 +427,13 @@ void sendDownUp2(KeyCode code) {
 
 void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
-	KEYBDINPUT kb={0};
-	INPUT Input={0};
-
-	kb.wScan = key;
-	kb.dwFlags = KEYEVENTF_UNICODE | dwFlagsFromKeyInfo(keyInfo);
-	Input.type = INPUT_KEYBOARD;
-	Input.ki = kb;
+	INPUT Input = {
+		.type = INPUT_KEYBOARD,
+		.ki = {
+			.wScan = key,
+			.dwFlags = KEYEVENTF_UNICODE | dwFlagsFromKeyInfo(keyInfo)
+		}
+	};
 	SendInput(1, &Input, sizeof(Input));
 }
 
