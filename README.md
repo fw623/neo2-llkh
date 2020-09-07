@@ -55,7 +55,7 @@ Wenn du ein anderers Layout verwenden möchtest, ändere den `layout`-Eintrag in
 
 `layout=adnw`
 
-Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `vou`, `qwertz`.
+Folgende Layout-Parameter werden erkannt: `neo`, `adnw`, `adnwzjf` (=AdNWzjßf), `bone`, `koy`, `kou`, `kou-fw623`, `vou`, `qwertz`.
 
 ### Einrasten von Ebene 2
 Das Einrasten von Ebene 2 (beide Shift-Tasten gleichzeitig) wird unterstützt, muss aber explizit aktiviert werden. Dafür muss der Wert von `shiftLockEnabled` in der `settings.ini` auf `1` gesetzt werden:

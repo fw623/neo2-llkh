@@ -15,6 +15,23 @@
 #include "resources.h"
 #include <io.h>
 
+typedef struct KeyCode {
+	int vk;
+	int scan;
+	bool isExtended;
+} KeyCode;
+
+typedef struct Tap {
+	KeyCode code;
+	struct Tap *n;
+} Tap;
+
+typedef struct Mapping {
+	KeyCode key;
+	KeyCode hold;
+	Tap *tap;
+} Mapping;
+
 typedef struct ModState
 {
 	bool shift, mod3, mod4;
@@ -52,8 +69,18 @@ bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
 bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
 bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
+Tap capsLockTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
 bool mod3RAsReturn = false;          // if true, hitting Mod3R alone sends Return
+Tap mod3RTap[] = {
+	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ß
+	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ẞ (TODO:)
+	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ? (TODO:)
+	{.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}}, // return
+	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
+	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
+};
 bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
+Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
 
 /**
  * True if no mapping should be done
@@ -164,13 +191,13 @@ void initLayout()
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 
 	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
-	wcscpy(mappingTableLevel2 +  2, L"°§ℓ»«$€„“”—̧");
+	wcscpy(mappingTableLevel2 + 2, strcmp(layout, "kou-fw623") == 0 ? L"°§ℓ»«$€„“”–" : L"°§ℓ»«$€„“”—̧");
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
-	wcscpy(mappingTableLevel3 +  2, L"¹²³›‹¢¥‚‘’—̊");
+	wcscpy(mappingTableLevel3 + 2, strcmp(layout, "kou-fw623") == 0 ? L"¹²³›‹¢¥‚‘’—" : L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
-	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@");
-	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
+	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@"); // TODO: fix right bracket in vscode
+	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';"); // TODO: fix bachslash in vscode
 
 	wcscpy(mappingTableLevel4 + 41, L"̇");
 	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
@@ -200,8 +227,9 @@ void initLayout()
 		wcscpy(mappingTableLevel1 + 44, L"xqäüöbpwmj");
 
 	} else if (strcmp(layout, "kou") == 0
-				|| strcmp(layout, "vou") == 0) {
-		if (strcmp(layout, "kou") == 0) {
+				  || strcmp(layout, "kou-fw623") == 0
+				  || strcmp(layout, "vou") == 0) {
+		if (strcmp(layout, "kou") == 0 || strcmp(layout, "kou-fw623") == 0) {
 			wcscpy(mappingTableLevel1 + 16, L"k.ouäqgclfj´");
 			wcscpy(mappingTableLevel1 + 30, L"haeiybtrnsß");
 			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmv");
@@ -211,15 +239,25 @@ void initLayout()
 			wcscpy(mappingTableLevel1 + 44, L"zx,üöpdwmk");
 		}
 
-		wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
-		wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
-		wcscpy(mappingTableLevel3 + 44, L"#[]~$+\"'\\;");
+		if (strcmp(layout, "kou-fw623") == 0) {
+			wcscpy(mappingTableLevel3 + 16, L"@#{}^•<>=!→̷");
+			wcscpy(mappingTableLevel3 + 30, L"|`:/*&()-_?");
+			wcscpy(mappingTableLevel3 + 44, L"%'\"$~+[];\\");
 
-		wcscpy(mappingTableLevel4 +  4, L"✔✘·£¤0/*-¨");
-		wcscpy(mappingTableLevel4 + 21, L":789+−˝");
-		wcscpy(mappingTableLevel4 + 35, L"-456,;");
-		wcscpy(mappingTableLevel4 + 49, L"_123.");
+			wcscpy(mappingTableLevel4 + 4, L"   £·/*-−¨");
+			wcscpy(mappingTableLevel4 + 21, L";789+\t−˝");
+			wcscpy(mappingTableLevel4 + 35, L":456.\n");
+			wcscpy(mappingTableLevel4 + 49, L"0123,");
+		} else { // kou or vou
+			wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
+			wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
+			wcscpy(mappingTableLevel3 + 44, L"#[]~$+\"'\\;");
 
+			wcscpy(mappingTableLevel4 + 4, L"✔✘·£¤0/*-¨");
+			wcscpy(mappingTableLevel4 + 21, L":789+−˝");
+			wcscpy(mappingTableLevel4 + 35, L"-456,;");
+			wcscpy(mappingTableLevel4 + 49, L"_123.");
+		}
 	} else if (strcmp(layout, "qwertz") == 0) {
 		wcscpy(mappingTableLevel1 + 12, L"ß");
 		wcscpy(mappingTableLevel1 + 16, L"qwertzuiopü+");
@@ -238,7 +276,7 @@ void initLayout()
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
-	charsLevel2 = L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+	charsLevel2 = strcmp(layout, "kou-fw623") == 0 ? L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!?" : L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {
@@ -278,15 +316,16 @@ void initLayout()
 		mappingTableLevel4Special[i] = 0;
 
 	mappingTableLevel4Special[16] = VK_PRIOR;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
+	if (strcmp(layout, "kou-fw623") == 0) {
+		mappingTableLevel4Special[17] = VK_NEXT;
+		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[43] = VK_RETURN;
+	} else if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTableLevel4Special[17] = VK_NEXT;
 		mappingTableLevel4Special[18] = VK_UP;
 		mappingTableLevel4Special[19] = VK_BACK;
 		mappingTableLevel4Special[20] = VK_DELETE;
-	}
-	else
-	{
+	} else {
 		mappingTableLevel4Special[17] = VK_BACK;
 		mappingTableLevel4Special[18] = VK_UP;
 		mappingTableLevel4Special[19] = VK_DELETE;
@@ -297,21 +336,25 @@ void initLayout()
 	mappingTableLevel4Special[32] = VK_DOWN;
 	mappingTableLevel4Special[33] = VK_RIGHT;
 	mappingTableLevel4Special[34] = VK_END;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTableLevel4Special[44] = VK_INSERT;
 		mappingTableLevel4Special[45] = VK_TAB;
 		mappingTableLevel4Special[46] = VK_RETURN;
 		mappingTableLevel4Special[47] = VK_ESCAPE;
-	}
-	else
-	{
+	} else if(strcmp(layout, "kou-fw623") != 0) {
+		mappingTableLevel4Special[44] = VK_SPACE;
+		mappingTableLevel4Special[45] = VK_SPACE;
+		mappingTableLevel4Special[46] = VK_SPACE;
+		mappingTableLevel4Special[47] = VK_SPACE;
+	} else {
 		mappingTableLevel4Special[44] = VK_ESCAPE;
 		mappingTableLevel4Special[45] = VK_TAB;
 		mappingTableLevel4Special[46] = VK_INSERT;
 		mappingTableLevel4Special[47] = VK_RETURN;
 	}
-	mappingTableLevel4Special[57] = '0';
+
+	if (strcmp(layout, "kou-fw623") != 0)
+		mappingTableLevel4Special[57] = '0';
 }
 
 void toggleBypassMode()
@@ -375,6 +418,11 @@ void sendUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	sendDown(vkCode, scanCode, isExtendedKey);
 	sendUp(vkCode, scanCode, isExtendedKey);
+}
+
+void sendDownUp2(KeyCode code) {
+	sendDown(code.vk, code.scan, code.isExtended);
+	sendUp(code.vk, code.scan, code.isExtended);
 }
 
 void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
@@ -473,14 +521,14 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
 		case 31:
-			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
+			if (strcmp(layout, "kou") == 0 || strcmp(layout, "kou-fw623") == 0 || strcmp(layout, "vou") == 0) {
 				sendChar(L'`', keyInfo);
 				commitDeadKey(keyInfo);
 				return true;
 			}
 			return false;
 		case 48:
-			if (strcmp(layout, "kou") != 0 && strcmp(layout, "vou") != 0) {
+			if (strcmp(layout, "kou") != 0 && strcmp(layout, "kou-fw623") != 0 && strcmp(layout, "vou") != 0) {
 				sendChar(L'`', keyInfo);
 				commitDeadKey(keyInfo);
 				return true;
@@ -506,6 +554,30 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 41:
 			sendChar(L'̇', keyInfo);  // dot above (Punkt, darüber)
 			return true;
+	}
+
+	// handle repeated up/down on layer 4 of kou-fw623 layout
+	if (strcmp(layout, "kou-fw623") == 0 && (keyInfo.scanCode == 19 || keyInfo.scanCode == 20))	{
+		if (keyInfo.flags & LLKHF_UP) {
+			if (keyInfo.scanCode == 19) {
+				sendUp(VK_UP, 72, true);
+			}	else if (keyInfo.scanCode == 20) {
+				sendUp(VK_DOWN, 80, true);
+			}
+			return true;
+		}
+
+		if (keyInfo.scanCode == 19) {
+			for (int i = 0; i < 7; i++)
+				sendDownUp(VK_UP, 72, true);
+			sendDown(VK_UP, 72, true);
+			return true;
+		}	else if (keyInfo.scanCode == 20) {
+			for (int i = 0; i < 7; i++)
+				sendDownUp(VK_DOWN, 80, true);
+			sendDown(VK_DOWN, 80, true);
+			return true;
+		}
 	}
 
 	// A second level 4 mapping table for special (non-unicode) keys.
@@ -785,7 +857,8 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
-				sendDownUp(VK_TAB, 15, true); // send Tab
+				sendDownUp2(mod4LTap.code);
+				//sendDownUp(VK_TAB, 15, true); // send Tab
 				level4modLeftAndNoOtherKeyPressed = false;
 				modState->mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
@@ -1092,6 +1165,7 @@ int main(int argc, char *argv[])
 				|| strcmp(argv[i], "bone") == 0
 				|| strcmp(argv[i], "koy") == 0
 				|| strcmp(argv[i], "kou") == 0
+				|| strcmp(argv[i], "kou-fw623") == 0
 				|| strcmp(argv[i], "vou") == 0
 				|| strcmp(argv[i], "qwertz") == 0) {
 				strncpy(layout, argv[i], 100);
