@@ -73,14 +73,6 @@ bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
 Tap mod3LTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
 Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
 Tap mod3RTap = {.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}};
-Tap mod4RTap[] = {
-	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ß
-	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ẞ (TODO:)
-	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // ? (TODO:)
-	{.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}}, // return
-	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
-	{.code = {.vk = 0xDB, .scan = 43, .isExtended = false}}, // (TODO:)
-};
 
 /**
  * True if no mapping should be done
@@ -852,7 +844,7 @@ void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 	}
 }
 
-void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
+void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp, unsigned level) {
 	if (isKeyUp) {
 		if (keyInfo.scanCode == scanCodeMod4L) {
 			level4modLeftPressed = false;
@@ -862,7 +854,6 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
 				sendDownUp2(mod4LTap.code);
-				//sendDownUp(VK_TAB, 15, true); // send Tab
 				level4modLeftAndNoOtherKeyPressed = false;
 				modState->mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
@@ -872,6 +863,17 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 			if (level4modLeftPressed && level4LockEnabled) {
 				level4LockActive = !level4LockActive;
 				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			} else if (level4modRightAndNoOtherKeyPressed) {
+				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_R
+
+				// TODO: adjust to layers
+				keyInfo.flags &= ~LLKHF_UP;
+				sendUnicodeChar(L'ß', keyInfo);
+				keyInfo.flags |= LLKHF_UP;
+				sendUnicodeChar(L'ß', keyInfo);
+
+				modState->mod4 = level4modLeftPressed | level4modRightPressed;
+				return;
 			}
 		}
 		modState->mod4 = level4modLeftPressed | level4modRightPressed;
@@ -884,6 +886,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool isKeyUp) {
 				level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
 		} else { // scanCodeMod4R
 			level4modRightPressed = true;
+			level4modRightAndNoOtherKeyPressed = !(level4modLeftPressed || level3modLeftPressed || level3modRightPressed);
 		}
 		modState->mod4 = level4modLeftPressed | level4modRightPressed;
 	}
@@ -904,7 +907,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, ModState *modState, bool i
 		handleMod3Key(keyInfo, modState, isKeyUp);
 		return false;
 	} else if (isMod4(keyInfo)) {
-		handleMod4Key(keyInfo, modState, isKeyUp);
+		handleMod4Key(keyInfo, modState, isKeyUp, level);
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;
