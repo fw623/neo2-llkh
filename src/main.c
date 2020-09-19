@@ -74,6 +74,8 @@ Tap mod3LTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
 Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
 Tap mod3RTap = {.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}};
 
+// @TODO: implement proper modifier tapping and key remapping (for ctrl, alt, ...)
+
 /**
  * True if no mapping should be done
  */
@@ -173,21 +175,16 @@ void initLevel4SpecialCases() {
 		mappingTableLevel4Special[i] = 0;
 
 	mappingTableLevel4Special[16] = VK_PRIOR;
-	if (strcmp(layout, "kou-fw623") == 0)
-	{
+	if (strcmp(layout, "kou-fw623") == 0) {
 		mappingTableLevel4Special[17] = VK_NEXT;
 		mappingTableLevel4Special[18] = VK_UP;
 		mappingTableLevel4Special[43] = VK_RETURN;
-	}
-	else if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
+	} else if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTableLevel4Special[17] = VK_NEXT;
 		mappingTableLevel4Special[18] = VK_UP;
 		mappingTableLevel4Special[19] = VK_BACK;
 		mappingTableLevel4Special[20] = VK_DELETE;
-	}
-	else
-	{
+	} else {
 		mappingTableLevel4Special[17] = VK_BACK;
 		mappingTableLevel4Special[18] = VK_UP;
 		mappingTableLevel4Special[19] = VK_DELETE;
@@ -198,22 +195,18 @@ void initLevel4SpecialCases() {
 	mappingTableLevel4Special[32] = VK_DOWN;
 	mappingTableLevel4Special[33] = VK_RIGHT;
 	mappingTableLevel4Special[34] = VK_END;
-	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0)
-	{
+	if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTableLevel4Special[44] = VK_INSERT;
 		mappingTableLevel4Special[45] = VK_TAB;
 		mappingTableLevel4Special[46] = VK_RETURN;
 		mappingTableLevel4Special[47] = VK_ESCAPE;
-	}
-	else if (strcmp(layout, "kou-fw623") != 0)
-	{
+	} else if (strcmp(layout, "kou-fw623") == 0) {
 		mappingTableLevel4Special[44] = VK_SPACE;
 		mappingTableLevel4Special[45] = VK_SPACE;
-		mappingTableLevel4Special[46] = VK_SPACE;
+		mappingTableLevel4Special[46] = VK_RETURN;
 		mappingTableLevel4Special[47] = VK_SPACE;
-	}
-	else
-	{
+		mappingTableLevel4Special[49] = VK_BACK; // new special case
+	} else {
 		mappingTableLevel4Special[44] = VK_ESCAPE;
 		mappingTableLevel4Special[45] = VK_TAB;
 		mappingTableLevel4Special[46] = VK_INSERT;
@@ -247,8 +240,8 @@ void initLayout()
 	wcscpy(mappingTableLevel3 + 41, L"^");
 	wcscpy(mappingTableLevel3 + 2, strcmp(layout, "kou-fw623") == 0 ? L"¹²³›‹¢¥‚‘’—" : L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
-	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@"); // TODO: fix right bracket in vscode
-	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';"); // TODO: fix bachslash in vscode
+	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@"); // TODO: fix right brace in vscode
+	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';"); // TODO: fix backslash in vscode
 
 	wcscpy(mappingTableLevel4 + 41, L"̇");
 	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
@@ -291,14 +284,15 @@ void initLayout()
 		}
 
 		if (strcmp(layout, "kou-fw623") == 0) {
-			wcscpy(mappingTableLevel3 + 16, L"@#{}^•<>=!→̷");
-			wcscpy(mappingTableLevel3 + 30, L"|`:/*&()-_?");
-			wcscpy(mappingTableLevel3 + 44, L"%'\"$~+[];\\");
+			wcscpy(mappingTableLevel3 + 16, L"@=<>^ •{}#→̷");
+			wcscpy(mappingTableLevel3 + 30, L"`'-/*$():&|");
+			wcscpy(mappingTableLevel3 + 44, L"\\\"_+ ~[];%");
 
-			wcscpy(mappingTableLevel4 + 4, L"   £·/*-−¨");
+			wcscpy(mappingTableLevel4 + 4, L"   £=/*-−¨");
 			wcscpy(mappingTableLevel4 + 21, L";789+\t−˝");
 			wcscpy(mappingTableLevel4 + 35, L":456.\n");
-			wcscpy(mappingTableLevel4 + 49, L"0123,");
+			wcscpy(mappingTableLevel4 + 48, L"·");
+			wcscpy(mappingTableLevel4 + 50, L"123,");
 		} else { // kou or vou
 			wcscpy(mappingTableLevel3 + 16, L"@%{}^!<>=&€̷");
 			wcscpy(mappingTableLevel3 + 30, L"|`()*?/:-_→");
@@ -525,8 +519,15 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
+		case 30:
+			if (strcmp(layout, "kou-fw623") == 0) {
+				sendChar(L'`', keyInfo);
+				commitDeadKey(keyInfo);
+				return true;
+			}
+			return false;
 		case 31:
-			if (strcmp(layout, "kou") == 0 || strcmp(layout, "kou-fw623") == 0 || strcmp(layout, "vou") == 0) {
+			if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 				sendChar(L'`', keyInfo);
 				commitDeadKey(keyInfo);
 				return true;
@@ -887,7 +888,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 				keyInfo.flags |= LLKHF_UP;
 				sendUnicodeChar(L'ß', keyInfo);
 
-				modState->mod4 = level4modLeftPressed | level4modRightPressed;
+				modState.mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
 			}
 		}
