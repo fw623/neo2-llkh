@@ -896,7 +896,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 			} else if (level4modRightAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_R
 
-				if (shiftLockEnabled || shiftRightPressed || shiftLeftPressed) {
+				if (shiftLockActive || capsLockActive || shiftRightPressed || shiftLeftPressed) {
 					keyInfo.flags &= ~LLKHF_UP;
 					sendUnicodeChar(L'ẞ', keyInfo);
 					keyInfo.flags |= LLKHF_UP;
