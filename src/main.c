@@ -176,8 +176,8 @@ void initLevel4SpecialCases() {
 
 	mappingTableLevel4Special[16] = VK_PRIOR;
 	if (strcmp(layout, "kou-fw623") == 0) {
-		mappingTableLevel4Special[17] = VK_NEXT;
 		mappingTableLevel4Special[18] = VK_UP;
+		mappingTableLevel4Special[20] = VK_NEXT;
 		mappingTableLevel4Special[43] = VK_RETURN;
 	} else if (strcmp(layout, "kou") == 0 || strcmp(layout, "vou") == 0) {
 		mappingTableLevel4Special[17] = VK_NEXT;
@@ -235,10 +235,10 @@ void initLayout()
 	wcscpy(mappingTableLevel1 +  2, L"1234567890-`");
 
 	wcscpy(mappingTableLevel2 + 41, L"̌");  // key to the left of the "1" key
-	wcscpy(mappingTableLevel2 + 2, strcmp(layout, "kou-fw623") == 0 ? L"°§ℓ»«$€„“”–" : L"°§ℓ»«$€„“”—̧");
+	wcscpy(mappingTableLevel2 + 2, strcmp(layout, "kou-fw623") == 0 ? L"°§ℓ»«¢€„“”–" : L"°§ℓ»«$€„“”—̧");
 
 	wcscpy(mappingTableLevel3 + 41, L"^");
-	wcscpy(mappingTableLevel3 + 2, strcmp(layout, "kou-fw623") == 0 ? L"¹²³›‹¢¥‚‘’—" : L"¹²³›‹¢¥‚‘’—̊");
+	wcscpy(mappingTableLevel3 + 2, strcmp(layout, "kou-fw623") == 0 ? L"¹²³›‹¥£‚‘’—" : L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@"); // TODO: fix right brace in vscode
 	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';"); // TODO: fix backslash in vscode
@@ -284,11 +284,11 @@ void initLayout()
 		}
 
 		if (strcmp(layout, "kou-fw623") == 0) {
-			wcscpy(mappingTableLevel3 + 16, L"@=<>^ •{}#→̷");
-			wcscpy(mappingTableLevel3 + 30, L"`'-/*$():&|");
-			wcscpy(mappingTableLevel3 + 44, L"\\\"_+ ~[];%");
+			wcscpy(mappingTableLevel3 + 16, L"@=:^• #<>~→̷");
+			wcscpy(mappingTableLevel3 + 30, L"`'-/*&{()}|");
+			wcscpy(mappingTableLevel3 + 44, L"\\\"_+ $[];%");
 
-			wcscpy(mappingTableLevel4 + 4, L"   £=/*-−¨");
+			wcscpy(mappingTableLevel4 + 4, L"    =/*-−¨");
 			wcscpy(mappingTableLevel4 + 21, L";789+\t−˝");
 			wcscpy(mappingTableLevel4 + 35, L":456.\n");
 			wcscpy(mappingTableLevel4 + 48, L"·");
@@ -512,10 +512,20 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		case 13:
 			sendChar(L'̊', keyInfo);  // overring
 			return true;
+		case 19:
+			if (strcmp(layout, "kou-fw623") == 0) {
+				sendChar(L'^', keyInfo);
+				commitDeadKey(keyInfo);
+				return true;
+			}
+			return false;
 		case 20:
-			sendChar(L'^', keyInfo);
-			commitDeadKey(keyInfo);
-			return true;
+			if (strcmp(layout, "kou-fw623") != 0) {
+				sendChar(L'^', keyInfo);
+				commitDeadKey(keyInfo);
+				return true;
+			}
+			return false;
 		case 27:
 			sendChar(L'̷', keyInfo);  // bar (diakritischer Schrägstrich)
 			return true;
@@ -563,22 +573,22 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 
 	// handle repeated up/down on layer 4 of kou-fw623 layout
-	if (strcmp(layout, "kou-fw623") == 0 && (keyInfo.scanCode == 19 || keyInfo.scanCode == 20))	{
+	if (strcmp(layout, "kou-fw623") == 0 && (keyInfo.scanCode == 17 || keyInfo.scanCode == 19))	{
 		if (keyInfo.flags & LLKHF_UP) {
-			if (keyInfo.scanCode == 19) {
+			if (keyInfo.scanCode == 17) {
 				sendUp(VK_UP, 72, true);
-			}	else if (keyInfo.scanCode == 20) {
+			}	else if (keyInfo.scanCode == 19) {
 				sendUp(VK_DOWN, 80, true);
 			}
 			return true;
 		}
 
-		if (keyInfo.scanCode == 19) {
+		if (keyInfo.scanCode == 17) {
 			for (int i = 0; i < 7; i++)
 				sendDownUp(VK_UP, 72, true);
 			sendDown(VK_UP, 72, true);
 			return true;
-		}	else if (keyInfo.scanCode == 20) {
+		}	else if (keyInfo.scanCode == 19) {
 			for (int i = 0; i < 7; i++)
 				sendDownUp(VK_DOWN, 80, true);
 			sendDown(VK_DOWN, 80, true);
