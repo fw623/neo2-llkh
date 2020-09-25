@@ -886,20 +886,35 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 			}
 		} else { // scanCodeMod4R
 			level4modRightPressed = false;
-			if (level4modLeftPressed && level4LockEnabled) {
-				level4LockActive = !level4LockActive;
-				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+			if (level4modLeftPressed) {
+				if (level4LockEnabled) {
+					level4LockActive = !level4LockActive;
+					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
+				} else {
+					sendDownUp2(mod3RTap.code); // send return
+				}
 			} else if (level4modRightAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_R
 
-				// TODO: adjust to layers
-				keyInfo.flags &= ~LLKHF_UP;
-				sendUnicodeChar(L'ß', keyInfo);
-				keyInfo.flags |= LLKHF_UP;
-				sendUnicodeChar(L'ß', keyInfo);
+				if (shiftLockEnabled || shiftRightPressed || shiftLeftPressed) {
+					keyInfo.flags &= ~LLKHF_UP;
+					sendUnicodeChar(L'ẞ', keyInfo);
+					keyInfo.flags |= LLKHF_UP;
+					sendUnicodeChar(L'ẞ', keyInfo);
+				} else {
+					keyInfo.flags &= ~LLKHF_UP;
+					sendUnicodeChar(L'ß', keyInfo);
+					keyInfo.flags |= LLKHF_UP;
+					sendUnicodeChar(L'ß', keyInfo);
+				}
 
 				modState.mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
+			} else if (level3modLeftPressed || level3modRightPressed) {
+				keyInfo.flags &= ~LLKHF_UP;
+				sendUnicodeChar(L'|', keyInfo);
+				keyInfo.flags |= LLKHF_UP;
+				sendUnicodeChar(L'|', keyInfo);
 			}
 		}
 		modState.mod4 = level4modLeftPressed | level4modRightPressed;
