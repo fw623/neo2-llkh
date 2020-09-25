@@ -321,7 +321,7 @@ void initLayout()
 
 	// map letters of level 2
 	TCHAR * charsLevel2;
-	charsLevel2 = strcmp(layout, "kou-fw623") == 0 ? L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ!?" : L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
+	charsLevel2 = strcmp(layout, "kou-fw623") == 0 ? L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ?!" : L"ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ•–";
 	mapLevels_2_5_6(mappingTableLevel2, charsLevel2);
 
 	if (supportLevels5and6) {
