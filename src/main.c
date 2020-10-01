@@ -286,7 +286,7 @@ void initLayout()
 		if (strcmp(layout, "kou-fw623") == 0) {
 			wcscpy(mappingTableLevel3 + 16, L"@=:^• #<>~→̷");
 			wcscpy(mappingTableLevel3 + 30, L"`'-/*&{()}|");
-			wcscpy(mappingTableLevel3 + 44, L"\\\"_+ $[];%");
+			wcscpy(mappingTableLevel3 + 44, L"\\\"_+ ;[]$%");
 
 			wcscpy(mappingTableLevel4 + 4, L"    =/*-−¨");
 			wcscpy(mappingTableLevel4 + 21, L";789+\t−˝");
