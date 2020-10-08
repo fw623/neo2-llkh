@@ -7,35 +7,29 @@
  * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
  */
 
-#include <windows.h>
+#ifndef _GUARD_WINDOWS
+	#define _GUARD_WINDOWS
+	#include <windows.h>
+#endif
+
 #include <stdio.h>
 #include <wchar.h>
 #include <stdbool.h>
 #include "trayicon.h"
 #include "resources.h"
 #include <io.h>
+#include <time.h>
+#include "config.h"
+#include "state.h"
 
-typedef struct KeyCode {
-	int vk;
-	int scan;
-	bool isExtended;
-} KeyCode;
-
-typedef struct Tap {
-	KeyCode code;
-	struct Tap *n;
-} Tap;
-
-typedef struct Mapping {
-	KeyCode key;
-	KeyCode hold;
-	Tap *tap;
-} Mapping;
-
-typedef struct ModState
-{
+typedef struct {
 	bool shift, mod3, mod4;
-} ModState;
+} SimpleModState;
+
+typedef struct {
+	InputKey key;
+	time_t time;
+} LastKey;
 
 HHOOK keyhook = NULL;
 #define APPNAME "neo-llkh"
@@ -46,7 +40,7 @@ HHOOK keyhook = NULL;
 #define SCANCODE_QUOTE_KEY 40      // Ä
 #define SCANCODE_HASH_KEY 43       // #
 #define SCANCODE_RETURN_KEY 28
-// #define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
+#define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
 
 /**
  * Some global settings.
@@ -70,11 +64,13 @@ bool supportLevels5and6 = false;     // support levels five and six (greek lette
 bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
 bool mod3RAsReturn = false;          // if true, hitting Mod3R alone sends Return
 bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
-Tap mod3LTap = {.code = {.vk = VK_BACK, .scan = 14, .isExtended = false}};
-Tap mod4LTap = { .code = { .vk = VK_DELETE, .scan = 83, .isExtended = true } };
-Tap mod3RTap = {.code = {.vk = VK_RETURN, .scan = 28, .isExtended = false}};
+SendKey mod4LTapOld = { VK_DELETE, 83, true };
 
 // @TODO: implement proper modifier tapping and key remapping (for ctrl, alt, ...)
+
+
+LastKey lastKey; // this saves the last keypress and is used for taps
+int maxTapMillisec = 150;
 
 /**
  * True if no mapping should be done
@@ -106,7 +102,7 @@ bool altLeftPressed = false;
 bool winLeftPressed = false;
 bool winRightPressed = false;
 
-ModState modState = { false, false, false };
+SimpleModState modState = { false, false, false };
 
 /**
  * Mapping tables for four levels.
@@ -410,8 +406,16 @@ void sendDown(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0), 0);
 }
 
+void sendDown2(SendKey key) {
+	keybd_event(key.vk, key.scan, (key.isExtended ? KEYEVENTF_EXTENDEDKEY : 0), 0);
+}
+
 void sendUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0) | KEYEVENTF_KEYUP, 0);
+}
+
+void sendUp2(SendKey key) {
+	keybd_event(key.vk, key.scan, (key.isExtended ? KEYEVENTF_EXTENDEDKEY : 0) | KEYEVENTF_KEYUP, 0);
 }
 
 void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
@@ -419,9 +423,9 @@ void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	sendUp(vkCode, scanCode, isExtendedKey);
 }
 
-void sendDownUp2(KeyCode code) {
-	sendDown(code.vk, code.scan, code.isExtended);
-	sendUp(code.vk, code.scan, code.isExtended);
+void sendDownUp2(SendKey key) {
+	sendDown2(key);
+	sendUp2(key);
 }
 
 void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
@@ -490,6 +494,10 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 void commitDeadKey(KBDLLHOOKSTRUCT keyInfo)
 {
 	if (!(keyInfo.flags & LLKHF_UP)) sendDownUp(VK_SPACE, 57, false);
+}
+
+bool isInputKey(KBDLLHOOKSTRUCT actual, InputKey desired) {
+	return actual.vkCode == desired.vk && actual.scanCode == desired.scan;
 }
 
 bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
@@ -623,12 +631,12 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 
 bool isMod3(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.scanCode == scanCodeMod3L || keyInfo.vkCode == VK_RMENU;
+	return isInputKey(keyInfo, modKeyConfigs.mod3.left.key) || isInputKey(keyInfo, modKeyConfigs.mod3.right.key);
 }
 
 bool isMod4(KBDLLHOOKSTRUCT keyInfo)
 {
-	return keyInfo.scanCode == scanCodeMod4L || keyInfo.scanCode == scanCodeMod4R;
+	return isInputKey(keyInfo, modKeyConfigs.mod4.left.key) || isInputKey(keyInfo, modKeyConfigs.mod4.right.key);
 }
 
 bool isSystemKeyPressed()
@@ -739,9 +747,9 @@ unsigned getLevel() {
 
 	if (modState.shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
 		level = 2;
-	if (modState.mod3)
+	if ((modKeyStates.mod3.leftIsPressed || modKeyStates.mod3.rightIsPressed) != modKeyStates.mod3.isLocked)
 		level = (supportLevels5and6 && level == 2) ? 5 : 3;
-	if (modState.mod4 != level4LockActive)
+	if ((modKeyStates.mod4.leftIsPressed || modKeyStates.mod4.rightIsPressed) != modKeyStates.mod4.isLocked)
 		level = (supportLevels5and6 && level == 3) ? 6 : 4;
 
 	return level;
@@ -830,43 +838,46 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	return true;
 }
 
-void handleMod3Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
-	if (isKeyUp) {
-		if (keyInfo.vkCode == VK_RMENU) {
-			level3modRightPressed = false;
-			modState.mod3 = level3modLeftPressed | level3modRightPressed;
-			if (mod3RAsReturn && level3modRightAndNoOtherKeyPressed) {
-				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_R
-				sendDownUp2(mod3RTap.code);											 // send Return
-				level3modRightAndNoOtherKeyPressed = false;
-			}
-		} else { // scanCodeMod3L (CapsLock)
-			level3modLeftPressed = false;
-			modState.mod3 = level3modLeftPressed | level3modRightPressed;
-			if (capsLockAsEscape && level3modLeftAndNoOtherKeyPressed) {
-				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod3_L
-				sendDownUp2(mod3LTap.code); 										 // send Backspace
-				level3modLeftAndNoOtherKeyPressed = false;
-			}
-		}
+void handleModKeyUp(NeoModKeyConfig mod, bool *state) {
+	*state = false;
+
+	// @TODO: proper time stuff
+	if (mod.tap != NULL && lastKey.key.vk == mod.key.vk && lastKey.key.scan == mod.key.scan) {
+		sendUp(mod.key.vk, mod.key.scan, false);
+		sendDownUp2(mod.tap->lvl1);
 	}
+}
 
-	else { // keyDown
-		if (keyInfo.vkCode == VK_RMENU) {
-			level3modRightPressed = true;
-			if (mod3RAsReturn)
-				level3modRightAndNoOtherKeyPressed = true;
+// this assumes that the key (`mod`) is pressed; updates `isLocked`
+void handleModKeyDownLock(NeoModKeyConfig mod, bool bothLock, bool otherState, bool *isLocked) {
+	if (mod.tap == NULL && bothLock && otherState) {
+		*isLocked = !(*isLocked);
+	}
+}
 
-			/* ALTGR triggers two keys: LCONTROL and RMENU
-				we don't want to have any of those two here effective but return -1 seems
-				to change nothing, so we simply send keyup here.  */
-			sendUp(VK_RMENU, 56, false);
-		} else { // VK_CAPITAL (CapsLock)
-			level3modLeftPressed = true;
-			if (capsLockAsEscape)
-				level3modLeftAndNoOtherKeyPressed = true;
+void handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state) {
+	if (isKeyUp) {
+		if (isInputKey(keyInfo, mod.right.key)) {
+			handleModKeyUp(mod.right, &state->rightIsPressed);
+		} else {
+			handleModKeyUp(mod.left, &state->leftIsPressed);
 		}
-		modState.mod3 = level3modLeftPressed | level3modRightPressed;
+	}	else {
+		/* handle ALTGR (=RMENU):
+			that key triggers LCONTROL and RMENU --> we need to sendUp(LCONTROL) so we can write
+			normal characters */
+		InputKey rAlt = { VK_RMENU, 56 };
+		if (isInputKey(keyInfo, rAlt)) {
+			sendUp(VK_RMENU, 56, false);
+		}
+
+		if (isInputKey(keyInfo, mod.right.key)) {
+			state->rightIsPressed = true;
+			handleModKeyDownLock(mod.right, mod.bothLock, state->leftIsPressed, &state->isLocked);
+		} else {
+			state->leftIsPressed = true;
+			handleModKeyDownLock(mod.left, mod.bothLock, state->rightIsPressed, &state->isLocked);
+		}
 	}
 }
 
@@ -879,7 +890,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
-				sendDownUp2(mod4LTap.code);
+				sendDownUp2(mod4LTapOld);
 				level4modLeftAndNoOtherKeyPressed = false;
 				modState.mod4 = level4modLeftPressed | level4modRightPressed;
 				return;
@@ -891,7 +902,7 @@ void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 					level4LockActive = !level4LockActive;
 					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
 				} else {
-					sendDownUp2(mod3RTap.code); // send return
+					sendDownUp2(mod3RTap.lvl1); // send return
 				}
 			} else if (level4modRightAndNoOtherKeyPressed) {
 				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_R
@@ -945,10 +956,10 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	unsigned level = getLevel();
 
 	if (isMod3(keyInfo)) {
-		handleMod3Key(keyInfo, isKeyUp);
+		handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3);
 		return false;
 	} else if (isMod4(keyInfo)) {
-		handleMod4Key(keyInfo, isKeyUp);
+		handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4);
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;
@@ -982,6 +993,7 @@ __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
 	KBDLLHOOKSTRUCT keyInfo;
+	LastKey currentKey;
 
 	if (
 		code == HC_ACTION
@@ -994,6 +1006,16 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 			logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
 			return CallNextHookEx(NULL, code, wparam, lparam);
 		}
+	}
+
+	// update lastKey and currentKey
+	if (keyInfo.scanCode != 541) { // ignore LCONTROL that is sent when pressing ALTGR
+		lastKey.key.vk = currentKey.key.vk;
+		lastKey.key.scan = currentKey.key.scan;
+		lastKey.time = currentKey.time;
+		currentKey.key.vk = keyInfo.vkCode;
+		currentKey.key.scan = keyInfo.scanCode;
+		currentKey.time = time(NULL);
 	}
 
 	if (code == HC_ACTION && isShift(keyInfo)) {
