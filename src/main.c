@@ -881,69 +881,6 @@ void handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoMo
 	}
 }
 
-void handleMod4Key(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
-	if (isKeyUp) {
-		if (keyInfo.scanCode == scanCodeMod4L) {
-			level4modLeftPressed = false;
-			if (level4modRightPressed && level4LockEnabled) {
-				level4LockActive = !level4LockActive;
-				printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-			} else if (mod4LAsTab && level4modLeftAndNoOtherKeyPressed) {
-				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_L
-				sendDownUp2(mod4LTapOld);
-				level4modLeftAndNoOtherKeyPressed = false;
-				modState.mod4 = level4modLeftPressed | level4modRightPressed;
-				return;
-			}
-		} else { // scanCodeMod4R
-			level4modRightPressed = false;
-			if (level4modLeftPressed) {
-				if (level4LockEnabled) {
-					level4LockActive = !level4LockActive;
-					printf("Level4 lock %s!\n", level4LockActive ? "activated" : "deactivated");
-				} else {
-					sendDownUp2(mod3RTap.lvl1); // send return
-				}
-			} else if (level4modRightAndNoOtherKeyPressed) {
-				sendUp(keyInfo.vkCode, keyInfo.scanCode, false); // release Mod4_R
-
-				if (shiftLockActive || capsLockActive || shiftRightPressed || shiftLeftPressed) {
-					keyInfo.flags &= ~LLKHF_UP;
-					sendUnicodeChar(L'ẞ', keyInfo);
-					keyInfo.flags |= LLKHF_UP;
-					sendUnicodeChar(L'ẞ', keyInfo);
-				} else {
-					keyInfo.flags &= ~LLKHF_UP;
-					sendUnicodeChar(L'ß', keyInfo);
-					keyInfo.flags |= LLKHF_UP;
-					sendUnicodeChar(L'ß', keyInfo);
-				}
-
-				modState.mod4 = level4modLeftPressed | level4modRightPressed;
-				return;
-			} else if (level3modLeftPressed || level3modRightPressed) {
-				keyInfo.flags &= ~LLKHF_UP;
-				sendUnicodeChar(L'|', keyInfo);
-				keyInfo.flags |= LLKHF_UP;
-				sendUnicodeChar(L'|', keyInfo);
-			}
-		}
-		modState.mod4 = level4modLeftPressed | level4modRightPressed;
-	}
-
-	else { // keyDown
-		if (keyInfo.scanCode == scanCodeMod4L) {
-			level4modLeftPressed = true;
-			if (mod4LAsTab)
-				level4modLeftAndNoOtherKeyPressed = !(level4modRightPressed || level3modLeftPressed || level3modRightPressed);
-		} else { // scanCodeMod4R
-			level4modRightPressed = true;
-			level4modRightAndNoOtherKeyPressed = !(level4modLeftPressed || level3modLeftPressed || level3modRightPressed);
-		}
-		modState.mod4 = level4modLeftPressed | level4modRightPressed;
-	}
-}
-
 /**
  * updates system key and layerLock states; writes key
  * returns `true` if next hook should be called, `false` otherwise
