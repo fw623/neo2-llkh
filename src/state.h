@@ -1,11 +1,10 @@
-
-typedef struct {
+typedef struct NeoModState {
 	bool leftIsPressed,
 		rightIsPressed,
 		isLocked;
 } NeoModState;
 
-typedef struct {
+typedef struct ModKeyStates {
 	NeoModState shift,
 		mod3,
 		mod4;

@@ -3,13 +3,13 @@
   #include <windows.h>
 #endif
 
-typedef struct {
+typedef struct SendKey {
 	int vk;
 	int scan;
 	bool isExtended;
 } SendKey;
 
-typedef struct {
+typedef struct LevelSendKey {
 	SendKey	lvl1,
 		lvl2,
 		lvl3,
@@ -18,36 +18,36 @@ typedef struct {
 		lvl6;
 } LevelSendKey;
 
-typedef struct {
+typedef struct InputKey {
 	int vk;
 	int scan;
 } InputKey;
 
-typedef struct {
+typedef struct ModKeyConfig {
 	InputKey key;
 	SendKey	hold;
 	LevelSendKey *tap;
 } ModKeyConfig;
 
-typedef struct {
+typedef struct NeoModKeyConfig {
 	InputKey key;
 	LevelSendKey *tap;
 } NeoModKeyConfig;
 
 // type to define neo modifier keys (i.e. mod3, mod4)
-typedef struct {
+typedef struct NeoModConfig {
 	InputKey *lock;
 	NeoModKeyConfig left, right;
 	bool bothLock; // should left + right at same time activate lock?
 } NeoModConfig;
 
 // type to define shift settings
-typedef struct {
+typedef struct ShiftModConfig {
 	ModKeyConfig *lock, left, right;
 	bool bothLock; // should left + right at same time activate lock?
 } ShiftModConfig;
 
-typedef struct {
+typedef struct ModKeyConfigs {
 	ShiftModConfig shift;
 	NeoModConfig mod3, mod4;
 	ModKeyConfig lCtrl,

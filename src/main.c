@@ -22,11 +22,11 @@
 #include "config.h"
 #include "state.h"
 
-typedef struct {
+typedef struct SimpleModState {
 	bool shift, mod3, mod4;
 } SimpleModState;
 
-typedef struct {
+typedef struct LastKey {
 	InputKey key;
 	time_t time;
 } LastKey;
