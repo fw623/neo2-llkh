@@ -369,6 +369,17 @@ void toggleBypassMode()
 	printf("%i bypass mode \n", bypassMode);
 }
 
+KBDLLHOOKSTRUCT newKeyInfo (SendKey send, DWORD flags) {
+	KBDLLHOOKSTRUCT keyInfo = {
+		.vkCode = send.vk,
+		.scanCode = send.scan,
+		.flags = (send.isExtended ? LLKHF_EXTENDED : 0) | (flags & ~LLKHF_EXTENDED), // ignore extended flag of incoming key
+		.time = 0,
+		.dwExtraInfo = 0
+	};
+	return keyInfo;
+}
+
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
@@ -863,14 +874,6 @@ void handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoMo
 			handleModKeyUp(mod.left, &state->leftIsPressed);
 		}
 	}	else {
-		/* handle ALTGR (=RMENU):
-			that key triggers LCONTROL and RMENU --> we need to sendUp(LCONTROL) so we can write
-			normal characters */
-		InputKey rAlt = { VK_RMENU, 56 };
-		if (isInputKey(keyInfo, rAlt)) {
-			sendUp(VK_RMENU, 56, false);
-		}
-
 		if (isInputKey(keyInfo, mod.right.key)) {
 			state->rightIsPressed = true;
 			handleModKeyDownLock(mod.right, mod.bothLock, state->leftIsPressed, &state->isLocked);
@@ -989,24 +992,234 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	return true;
 }
 
+
+
+
+
+
+bool
+write_event(const KBDLLHOOKSTRUCT keyInfo) {
+	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
+
+	if (isShift(keyInfo)) {
+		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
+		if (!continueExecution) return true;
+	}
+
+	// Shift + Pause
+	if (wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
+		toggleBypassMode();
+		return true;
+	}
+
+	if (bypassMode) {
+		if (keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
+			// synchronize with capsLock state during bypass
+			if (shiftLockEnabled) {
+				toggleShiftLock();
+			} else if (capsLockEnabled) {
+				toggleCapsLock();
+			}
+		}
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
+		return true;
+	}
+
+	// skip LCONTROL sent by pressing ALTGR
+	if (keyInfo.scanCode == 541) return true;
+
+
+	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
+		logKeyEvent("key up", keyInfo);
+
+		bool callNext = updateStatesAndWriteKey(keyInfo, true);
+		if (!callNext) return true;
+	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
+		printf("\n");
+		logKeyEvent("key down", keyInfo);
+
+		level3modLeftAndNoOtherKeyPressed = false;
+		level3modRightAndNoOtherKeyPressed = false;
+		level4modLeftAndNoOtherKeyPressed = false;
+		level4modRightAndNoOtherKeyPressed = false;
+
+		bool callNext = updateStatesAndWriteKey(keyInfo, false);
+		if (!callNext) return true;
+	}
+
+	keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
+	return true;
+}
+
+void
+tap(Mapping *m, DWORD flags) {
+    Tap *t;
+    for (t = m->tap; t; t = t->n) {
+        write_event(newKeyInfo(t->code, flags));
+    }
+}
+
+void
+handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
+
+    // state
+    switch (m->state) {
+        case TAPPED:
+        case DOUBLETAPPED:
+            if (input->time - m->changed < cfg.double_tap_millis)
+                m->state = DOUBLETAPPED;
+            else
+                m->state = PRESSED;
+            break;
+        case RELEASED:
+        case CONSUMED:
+            m->state = PRESSED;
+            break;
+        case PRESSED:
+            break;
+    }
+    m->changed = input->time;
+
+    // action
+    switch (m->state) {
+        case TAPPED:
+        case DOUBLETAPPED:
+            tap(m, 0);
+            break;
+        case RELEASED:
+        case PRESSED:
+        case CONSUMED:
+            // input->scanCode = m->hold;
+            // write_event(*input);
+            write_event(newKeyInfo(m->hold, input->flags));
+            break;
+    }
+}
+
+void
+handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
+
+    // state
+    switch (m->state) {
+        case PRESSED:
+            if (input->time - m->changed < cfg.tap_millis)
+                m->state = TAPPED;
+            else
+                m->state = RELEASED;
+            break;
+        case TAPPED:
+        case DOUBLETAPPED:
+            break;
+        case CONSUMED:
+            m->state = RELEASED;
+            break;
+        case RELEASED:
+            break;
+    }
+    m->changed = input->time;
+
+    // action
+    switch (m->state) {
+        case TAPPED:
+            // release
+            // input->scanCode = m->hold;
+            // write_event(*input);
+            write_event(newKeyInfo(m->hold, input->flags));
+
+            // synthesize tap
+            tap(m, 0);
+            tap(m, LLKHF_UP);
+            break;
+        case DOUBLETAPPED:
+            tap(m, LLKHF_UP);
+            break;
+        case CONSUMED:
+        case RELEASED:
+        case PRESSED:
+            // input->scanCode = m->hold;
+            // write_event(*input);
+            write_event(newKeyInfo(m->hold, input->flags));
+            break;
+    }
+}
+
+void
+consume_pressed() {
+
+    // state
+    for (Mapping *m = cfg.m; m; m = m->n) {
+        switch (m->state) {
+            case PRESSED:
+                m->state = CONSUMED;
+                break;
+            case TAPPED:
+            case DOUBLETAPPED:
+            case RELEASED:
+            case CONSUMED:
+                break;
+        }
+    }
+}
+
+bool
+dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
+    Mapping *m;
+
+    // consume all taps that are incomplete
+    if (!(input->flags & LLKHF_UP))
+        consume_pressed();
+
+    // is this our key?
+    for (m = cfg.m; m && m->key != input->scanCode; m = m->n);
+
+    // forward all other key events
+    if (!m) {
+        // write_event(*input);
+        return false;
+    }
+
+    if (input->flags & LLKHF_UP) {
+        handle_release(m, input);
+    } else {
+        handle_press(m, input);
+    }
+		return true;
+}
+
+
+
+
+
+
+
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
-	KBDLLHOOKSTRUCT keyInfo;
 	LastKey currentKey;
 
 	if (
-		code == HC_ACTION
-		&& (wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
+		code != HC_ACTION
+		|| !(wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
 	) {
-		keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
-
-		if (keyInfo.flags & LLKHF_INJECTED) {
-			// process injected events like normal, because most probably we are injecting them
-			logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
-			return CallNextHookEx(NULL, code, wparam, lparam);
-		}
+		/* Passes the hook information to the next hook procedure in the current hook chain.
+		* 1st Parameter hhk - Optional
+		* 2nd Parameter nCode - The next hook procedure uses this code to determine how to process the hook information.
+		* 3rd Parameter wParam - The wParam value passed to the current hook procedure.
+		* 4th Parameter lParam - The lParam value passed to the current hook procedure
+		*/
+		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
+
+	KBDLLHOOKSTRUCT keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
+
+	if (keyInfo.flags & LLKHF_INJECTED) {
+		// process injected events like normal, because most probably we are injecting them
+		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
+		return CallNextHookEx(NULL, code, wparam, lparam);
+	}
+
+	// remap keys and handle tapping
+	if (!bypassMode && dualFunctionKeys(&keyInfo)) return -1;
 
 	// update lastKey and currentKey
 	if (keyInfo.scanCode != 541) { // ignore LCONTROL that is sent when pressing ALTGR
@@ -1018,53 +1231,8 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		currentKey.time = time(NULL);
 	}
 
-	if (code == HC_ACTION && isShift(keyInfo)) {
-		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
-		if (!continueExecution) return -1;
-	}
+	if (write_event(keyInfo)) return -1;
 
-	// Shift + Pause
-	if (code == HC_ACTION && wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
-		toggleBypassMode();
-		return -1;
-	}
-
-	if (bypassMode) {
-		if (code == HC_ACTION && keyInfo.vkCode == VK_CAPITAL && !(keyInfo.flags & LLKHF_UP)) {
-			// synchronize with capsLock state during bypass
-			if (shiftLockEnabled) {
-				toggleShiftLock();
-			} else if (capsLockEnabled) {
-				toggleCapsLock();
-			}
-		}
-		return CallNextHookEx(NULL, code, wparam, lparam);
-	}
-
-	if (code == HC_ACTION && (wparam == WM_SYSKEYUP || wparam == WM_KEYUP)) {
-		logKeyEvent("key up", keyInfo);
-
-		bool callNext = updateStatesAndWriteKey(keyInfo, true);
-		if (!callNext) return -1;
-	} else if (code == HC_ACTION && (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)) {
-		printf("\n");
-		logKeyEvent("key down", keyInfo);
-
-		level3modLeftAndNoOtherKeyPressed = false;
-		level3modRightAndNoOtherKeyPressed = false;
-		level4modLeftAndNoOtherKeyPressed = false;
-		level4modRightAndNoOtherKeyPressed = false;
-
-		bool callNext = updateStatesAndWriteKey(keyInfo, false);
-		if (!callNext) return -1;
-	}
-
-	/* Passes the hook information to the next hook procedure in the current hook chain.
-	 * 1st Parameter hhk - Optional
-	 * 2nd Parameter nCode - The next hook procedure uses this code to determine how to process the hook information.
-	 * 3rd Parameter wParam - The wParam value passed to the current hook procedure.
-	 * 4th Parameter lParam - The lParam value passed to the current hook procedure
-	 */
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }
 

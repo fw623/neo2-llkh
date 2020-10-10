@@ -3,11 +3,46 @@
   #include <windows.h>
 #endif
 
+#define DEFAULT_TAP_MILLIS 200
+#define DEFAULT_DOUBLE_TAP_MILLIS 150
+
 typedef struct SendKey {
 	int vk;
 	int scan;
 	bool isExtended;
 } SendKey;
+
+// dualFunctionKeys stuff
+
+typedef enum State {
+    RELEASED,
+    PRESSED,
+    TAPPED,
+    DOUBLETAPPED,
+    CONSUMED,
+} State;
+
+typedef struct Tap {
+    SendKey code;
+    struct Tap *n;
+} Tap;
+
+typedef struct Mapping {
+    int key;
+    SendKey hold;
+    Tap *tap;
+    State state;
+    DWORD changed;
+    struct Mapping *n;
+} Mapping;
+
+typedef struct Cfg {
+    int tap_millis;
+    int double_tap_millis;
+    Mapping *m;
+} Cfg;
+
+// neo stuff
 
 typedef struct LevelSendKey {
 	SendKey	lvl1,
@@ -104,13 +139,15 @@ ModKeyConfigs modKeyConfigs = {
 		.lock = NULL,
 		.left = { .key = { VK_LSHIFT, 42 }, .hold = { VK_LSHIFT, 42, false }, .tap = NULL },
 		.right = { .key = { VK_RSHIFT, 54 }, .hold = { VK_RSHIFT, 54, true }, .tap = NULL },
-		true
+		.bothLock = true
 	},
 	.mod3 = {
 		.lock = NULL,
-		.left = { .key = { VK_CAPITAL, 58 }, .tap = &mod3LTap },
-		.right = { .key = { VK_RMENU, 56 }, .tap = &mod3RTap },
-		false
+		// .left = { .key = { VK_CAPITAL, 58 }, .tap = &mod3LTap },
+		// .right = { .key = { VK_RMENU, 56 }, .tap = &mod3RTap },
+		.left = { .key = { VK_CAPITAL, 58 }, .tap = NULL },
+		.right = { .key = { VK_RMENU, 56 }, .tap = NULL },
+		.bothLock = false
 	},
 	.mod4 = {
 		.lock = &mod4Lock,
@@ -118,7 +155,7 @@ ModKeyConfigs modKeyConfigs = {
 		// .right = { .key = { 0xDE, 40 }, .tap = &mod4RTap }, // Ä key
 		.left = { .key = { 0xE2, 86 }, .tap = NULL }, // > key
 		.right = { .key = { 0xDE, 40 }, .tap = NULL }, // Ä key
-		true
+		.bothLock = true
 	},
 	.lCtrl = {},
 	.rCtrl = {},
@@ -126,4 +163,33 @@ ModKeyConfigs modKeyConfigs = {
 	.rAlt = {},
 	.lMeta = {},
 	.rMeta = {},
+};
+
+
+// new way below
+
+Tap t4l = { .code = { VK_DELETE, 83, true }, .n = NULL };
+Mapping m4l = {
+	.key = 86,
+	.hold = { 0xE2, 86, false },
+	.tap = &t4l,
+	.state = RELEASED,
+	.changed = 0,
+	.n = NULL
+};
+
+Tap tCaps = { .code = { VK_BACK, 14, false }, .n = NULL };
+Mapping mCaps = {
+	.key = 58,
+	.hold = { VK_CAPITAL, 58, false },
+	.tap = &tCaps,
+	.state = RELEASED,
+	.changed = 0,
+	.n = &m4l
+};
+
+static Cfg cfg = {
+	.tap_millis = DEFAULT_TAP_MILLIS,
+	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
+	.m = &mCaps
 };
