@@ -637,16 +637,6 @@ bool isShift(KBDLLHOOKSTRUCT keyInfo)
 	    || keyInfo.vkCode == VK_RSHIFT;
 }
 
-bool isMod3(KBDLLHOOKSTRUCT keyInfo)
-{
-	return isInputKey(keyInfo, modKeyConfigs.mod3.left.key) || isInputKey(keyInfo, modKeyConfigs.mod3.right.key);
-}
-
-bool isMod4(KBDLLHOOKSTRUCT keyInfo)
-{
-	return isInputKey(keyInfo, modKeyConfigs.mod4.left.key) || isInputKey(keyInfo, modKeyConfigs.mod4.right.key);
-}
-
 bool isSystemKeyPressed()
 {
 	return ctrlLeftPressed || ctrlRightPressed
@@ -846,39 +836,26 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	return true;
 }
 
-void handleModKeyUp(NeoModKeyConfig mod, bool *state) {
-	*state = false;
-
-	// @TODO: proper time stuff
-	if (mod.tap != NULL && lastKey.key.vk == mod.key.vk && lastKey.key.scan == mod.key.scan) {
-		sendUp(mod.key.vk, mod.key.scan, false);
-		sendDownUp2(mod.tap->lvl1);
-	}
-}
-
-// this assumes that the key (`mod`) is pressed; updates `isLocked`
-void handleModKeyDownLock(NeoModKeyConfig mod, bool bothLock, bool otherState, bool *isLocked) {
-	if (mod.tap == NULL && bothLock && otherState) {
-		*isLocked = !(*isLocked);
-	}
-}
-
-void handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state) {
-	if (isKeyUp) {
-		if (isInputKey(keyInfo, mod.right.key)) {
-			handleModKeyUp(mod.right, &state->rightIsPressed);
-		} else {
-			handleModKeyUp(mod.left, &state->leftIsPressed);
+bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state) {
+	if (mod.lock && isInputKey(keyInfo, *mod.lock)) {
+		if (!isKeyUp) {
+			state->isLocked = !state->isLocked;
 		}
-	}	else {
-		if (isInputKey(keyInfo, mod.right.key)) {
-			state->rightIsPressed = true;
-			handleModKeyDownLock(mod.right, mod.bothLock, state->leftIsPressed, &state->isLocked);
-		} else {
-			state->leftIsPressed = true;
-			handleModKeyDownLock(mod.left, mod.bothLock, state->rightIsPressed, &state->isLocked);
+		return true;
+	} else if (isInputKey(keyInfo, mod.left)) {
+		state->leftIsPressed = !isKeyUp;
+		if (mod.bothLock && state->rightIsPressed && !isKeyUp) {
+			state->isLocked = !state->isLocked;
 		}
+		return true;
+	} else if (isInputKey(keyInfo, mod.right)) {
+		state->rightIsPressed = !isKeyUp;
+		if (mod.bothLock && state->leftIsPressed && !isKeyUp) {
+			state->isLocked = !state->isLocked;
+		}
+		return true;
 	}
+	return false;
 }
 
 /**
@@ -892,11 +869,9 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 
 	unsigned level = getLevel();
 
-	if (isMod3(keyInfo)) {
-		handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3);
+	if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3)) {
 		return false;
-	} else if (isMod4(keyInfo)) {
-		handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4);
+	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4)) {
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;

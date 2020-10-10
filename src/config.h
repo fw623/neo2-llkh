@@ -48,50 +48,14 @@ typedef struct Cfg {
     Mapping *m;
 } Cfg;
 
-// neo stuff
-
-typedef struct LevelSendKey {
-	SendKey	lvl1,
-		lvl2,
-		lvl3,
-		lvl4,
-		lvl5,
-		lvl6;
-} LevelSendKey;
-
-typedef struct ModKeyConfig {
-	InputKey key;
-	SendKey	hold;
-	LevelSendKey *tap;
-} ModKeyConfig;
-
-typedef struct NeoModKeyConfig {
-	InputKey key;
-	LevelSendKey *tap;
-} NeoModKeyConfig;
-
-// type to define neo modifier keys (i.e. mod3, mod4)
+// type to define neo modifier keys (i.e. mod3, mod4) and shift
 typedef struct NeoModConfig {
-	InputKey *lock;
-	NeoModKeyConfig left, right;
+	InputKey *lock, left, right;
 	bool bothLock; // should left + right at same time activate lock?
 } NeoModConfig;
 
-// type to define shift settings
-typedef struct ShiftModConfig {
-	ModKeyConfig *lock, left, right;
-	bool bothLock; // should left + right at same time activate lock?
-} ShiftModConfig;
-
 typedef struct ModKeyConfigs {
-	ShiftModConfig shift;
-	NeoModConfig mod3, mod4;
-	ModKeyConfig lCtrl,
-		rCtrl,
-		lAlt,
-		rAlt,
-		lMeta,
-		rMeta;
+	NeoModConfig shift, mod3, mod4;
 } ModKeyConfigs;
 
 /* ============ VALUES ============ */
@@ -99,28 +63,22 @@ typedef struct ModKeyConfigs {
 ModKeyConfigs modKeyConfigs = {
 	.shift = {
 		.lock = NULL,
-		.left = { .key = { VK_LSHIFT, 42 }, .hold = { VK_LSHIFT, 42, false }, .tap = NULL },
-		.right = { .key = { VK_RSHIFT, 54 }, .hold = { VK_RSHIFT, 54, true }, .tap = NULL },
+		.left = { VK_LSHIFT, 42 },
+		.right = { VK_RSHIFT, 54 },
 		.bothLock = true
 	},
 	.mod3 = {
 		.lock = NULL,
-		.left = { .key = { VK_CAPITAL, 58 }, .tap = NULL },
-		.right = { .key = { VK_RMENU, 56 }, .tap = NULL },
+		.left = { VK_CAPITAL, 58 },
+		.right = { VK_RMENU, 56 },
 		.bothLock = false
 	},
 	.mod4 = {
 		.lock = &(InputKey){ VK_RCONTROL, 29 },
-		.left = { .key = { 0xE2, 86 }, .tap = NULL }, // > key
-		.right = { .key = { 0xBF, 43 }, .tap = NULL }, // # key
-		.bothLock = true
-	},
-	.lCtrl = {},
-	.rCtrl = {},
-	.lAlt = {},
-	.rAlt = {},
-	.lMeta = {},
-	.rMeta = {},
+		.left = { 0xE2, 86 }, // > key
+		.right = { 0xBF, 43 }, // # key
+		.bothLock = false
+	}
 };
 
 // new way below
