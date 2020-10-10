@@ -6,6 +6,12 @@
 #define DEFAULT_TAP_MILLIS 200
 #define DEFAULT_DOUBLE_TAP_MILLIS 150
 
+
+typedef struct InputKey {
+	int vk;
+	int scan;
+} InputKey;
+
 typedef struct SendKey {
 	int vk;
 	int scan;
@@ -28,7 +34,7 @@ typedef struct Tap {
 } Tap;
 
 typedef struct Mapping {
-    int key;
+    InputKey key;
     SendKey hold;
     Tap *tap;
     State state;
@@ -52,11 +58,6 @@ typedef struct LevelSendKey {
 		lvl5,
 		lvl6;
 } LevelSendKey;
-
-typedef struct InputKey {
-	int vk;
-	int scan;
-} InputKey;
 
 typedef struct ModKeyConfig {
 	InputKey key;
@@ -143,16 +144,12 @@ ModKeyConfigs modKeyConfigs = {
 	},
 	.mod3 = {
 		.lock = NULL,
-		// .left = { .key = { VK_CAPITAL, 58 }, .tap = &mod3LTap },
-		// .right = { .key = { VK_RMENU, 56 }, .tap = &mod3RTap },
 		.left = { .key = { VK_CAPITAL, 58 }, .tap = NULL },
 		.right = { .key = { VK_RMENU, 56 }, .tap = NULL },
 		.bothLock = false
 	},
 	.mod4 = {
 		.lock = &mod4Lock,
-		// .left = { .key = { 0xE2, 86 }, .tap = &mod4LTap }, // > key
-		// .right = { .key = { 0xDE, 40 }, .tap = &mod4RTap }, // Ä key
 		.left = { .key = { 0xE2, 86 }, .tap = NULL }, // > key
 		.right = { .key = { 0xBF, 43 }, .tap = NULL }, // # key
 		.bothLock = true
@@ -169,25 +166,34 @@ ModKeyConfigs modKeyConfigs = {
 // new way below
 
 Mapping mod3R = {
-	.key = 40,
-	.hold = { 0xBF, 43, false },
-	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
+	.key = { 0xA5, 56 },
+	.hold = { 0xA5, 56, true },
+	.tap = &(Tap){ { VK_RETURN, 28, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = NULL
 };
 
-Mapping mod4L = {
-	.key = 86,
-	.hold = { 0xE2, 86, false },
-	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
+Mapping mod4R = {
+	.key = { 0xDE, 40 },
+	.hold = { 0xBF, 43, false },
+	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = &mod3R
 };
 
+Mapping mod4L = {
+	.key = { 0xE2, 86 },
+	.hold = { 0xE2, 86, false },
+	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
+	.state = RELEASED,
+	.changed = 0,
+	.n = &mod4R
+};
+
 Mapping mod3L = {
-	.key = 58,
+	.key = { VK_CAPITAL, 58 },
 	.hold = { VK_CAPITAL, 58, false },
 	.tap = &(Tap){ { VK_BACK, 14, false }, NULL },
 	.state = RELEASED,

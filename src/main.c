@@ -1152,7 +1152,7 @@ dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
         consume_pressed();
 
     // is this our key?
-    for (m = cfg.m; m && m->key != input->scanCode; m = m->n);
+    for (m = cfg.m; m && !isInputKey(*input, m->key); m = m->n);
 
     // forward all other key events
     if (!m) {
