@@ -576,9 +576,6 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 
 bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 {
-	// return if left Ctrl was injected by AltGr
-	if (keyInfo.scanCode == 541) return -1;
-
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
@@ -983,7 +980,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 		} if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 			// if key must be mapped
 			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
-			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", " mapped", keyInfo.scanCode, character, key, key, level);
+			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", "mapped", keyInfo.scanCode, character, key, key, level);
 			sendChar(key, keyInfo);
 			return false;
 		}
@@ -992,13 +989,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	return true;
 }
 
-
-
-
-
-
-bool
-write_event(const KBDLLHOOKSTRUCT keyInfo) {
+bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
 
 	if (isShift(keyInfo)) {
@@ -1035,7 +1026,6 @@ write_event(const KBDLLHOOKSTRUCT keyInfo) {
 		bool callNext = updateStatesAndWriteKey(keyInfo, true);
 		if (!callNext) return true;
 	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		printf("\n");
 		logKeyEvent("key down", keyInfo);
 
 		level3modLeftAndNoOtherKeyPressed = false;
@@ -1051,17 +1041,15 @@ write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	return true;
 }
 
-void
-tap(Mapping *m, DWORD flags) {
+void tap(Mapping *m, DWORD flags) {
     Tap *t;
     for (t = m->tap; t; t = t->n) {
+				printf("remapped tap\n");
         write_event(newKeyInfo(t->code, flags));
     }
 }
 
-void
-handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
-
+void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
     // state
     switch (m->state) {
         case TAPPED:
@@ -1089,16 +1077,13 @@ handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
         case RELEASED:
         case PRESSED:
         case CONSUMED:
-            // input->scanCode = m->hold;
-            // write_event(*input);
+						printf("remapped down\n");
             write_event(newKeyInfo(m->hold, input->flags));
             break;
     }
 }
 
-void
-handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
-
+void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
     // state
     switch (m->state) {
         case PRESSED:
@@ -1121,9 +1106,8 @@ handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
     // action
     switch (m->state) {
         case TAPPED:
+						printf("remapped release\n");
             // release
-            // input->scanCode = m->hold;
-            // write_event(*input);
             write_event(newKeyInfo(m->hold, input->flags));
 
             // synthesize tap
@@ -1136,15 +1120,13 @@ handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
         case CONSUMED:
         case RELEASED:
         case PRESSED:
-            // input->scanCode = m->hold;
-            // write_event(*input);
+						printf("remapped up\n");
             write_event(newKeyInfo(m->hold, input->flags));
             break;
     }
 }
 
-void
-consume_pressed() {
+void consume_pressed() {
 
     // state
     for (Mapping *m = cfg.m; m; m = m->n) {
@@ -1186,12 +1168,6 @@ dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
 		return true;
 }
 
-
-
-
-
-
-
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 {
@@ -1217,6 +1193,10 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
+
+	printf("\n");
+	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "actual up" : "actual down", keyInfo);
+
 
 	// remap keys and handle tapping
 	if (!bypassMode && dualFunctionKeys(&keyInfo)) return -1;

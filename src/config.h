@@ -154,7 +154,7 @@ ModKeyConfigs modKeyConfigs = {
 		// .left = { .key = { 0xE2, 86 }, .tap = &mod4LTap }, // > key
 		// .right = { .key = { 0xDE, 40 }, .tap = &mod4RTap }, // Ä key
 		.left = { .key = { 0xE2, 86 }, .tap = NULL }, // > key
-		.right = { .key = { 0xDE, 40 }, .tap = NULL }, // Ä key
+		.right = { .key = { 0xBF, 43 }, .tap = NULL }, // # key
 		.bothLock = true
 	},
 	.lCtrl = {},
@@ -168,28 +168,35 @@ ModKeyConfigs modKeyConfigs = {
 
 // new way below
 
-Tap t4l = { .code = { VK_DELETE, 83, true }, .n = NULL };
-Mapping m4l = {
-	.key = 86,
-	.hold = { 0xE2, 86, false },
-	.tap = &t4l,
+Mapping mod3R = {
+	.key = 40,
+	.hold = { 0xBF, 43, false },
+	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = NULL
 };
 
-Tap tCaps = { .code = { VK_BACK, 14, false }, .n = NULL };
-Mapping mCaps = {
-	.key = 58,
-	.hold = { VK_CAPITAL, 58, false },
-	.tap = &tCaps,
+Mapping mod4L = {
+	.key = 86,
+	.hold = { 0xE2, 86, false },
+	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
 	.state = RELEASED,
 	.changed = 0,
-	.n = &m4l
+	.n = &mod3R
+};
+
+Mapping mod3L = {
+	.key = 58,
+	.hold = { VK_CAPITAL, 58, false },
+	.tap = &(Tap){ { VK_BACK, 14, false }, NULL },
+	.state = RELEASED,
+	.changed = 0,
+	.n = &mod4L
 };
 
 static Cfg cfg = {
 	.tap_millis = DEFAULT_TAP_MILLIS,
 	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
-	.m = &mCaps
+	.m = &mod3L
 };
