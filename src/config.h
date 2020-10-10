@@ -96,45 +96,6 @@ typedef struct ModKeyConfigs {
 
 /* ============ VALUES ============ */
 
-LevelSendKey mod3LTap = {
-	{ VK_BACK, 14, false },
-	{ VK_BACK, 14, false },
-	{ VK_BACK, 14, false },
-	{ VK_BACK, 14, false },
-	{ VK_BACK, 14, false },
-	{ VK_BACK, 14, false },
-};
-
-LevelSendKey mod3RTap = {
-	{ VK_RETURN, 28, false },
-	{ VK_RETURN, 28, false },
-	{ VK_RETURN, 28, false },
-	{ VK_RETURN, 28, false },
-	{ VK_RETURN, 28, false },
-	{ VK_RETURN, 28, false },
-};
-
-InputKey mod4Lock = { VK_RCONTROL, 29 };
-
-LevelSendKey mod4LTap = {
-	{ VK_DELETE, 83, true },
-	{ VK_DELETE, 83, true },
-	{ VK_DELETE, 83, true },
-	{ VK_DELETE, 83, true },
-	{ VK_DELETE, 83, true },
-	{ VK_DELETE, 83, true },
-};
-
-// @TODO: change to proper stuff
-LevelSendKey mod4RTap = {
-	{ 0x44, 32, false },
-	{ 0x44, 32, false },
-	{ 0x44, 32, false },
-	{ 0x44, 32, false },
-	{ 0x44, 32, false },
-	{ 0x44, 32, false },
-};
-
 ModKeyConfigs modKeyConfigs = {
 	.shift = {
 		.lock = NULL,
@@ -149,7 +110,7 @@ ModKeyConfigs modKeyConfigs = {
 		.bothLock = false
 	},
 	.mod4 = {
-		.lock = &mod4Lock,
+		.lock = &(InputKey){ VK_RCONTROL, 29 },
 		.left = { .key = { 0xE2, 86 }, .tap = NULL }, // > key
 		.right = { .key = { 0xBF, 43 }, .tap = NULL }, // # key
 		.bothLock = true
@@ -162,47 +123,73 @@ ModKeyConfigs modKeyConfigs = {
 	.rMeta = {},
 };
 
-
 // new way below
 
-Mapping mod3R = {
-	.key = { 0xA5, 56 },
-	.hold = { 0xA5, 56, true },
-	.tap = &(Tap){ { VK_RETURN, 28, false }, NULL },
+Mapping dfkCtrlL = {
+	.key = { VK_LCONTROL, 29 },
+	.hold = { VK_LWIN, 91, true },
+	.tap = NULL,
 	.state = RELEASED,
 	.changed = 0,
 	.n = NULL
 };
 
-Mapping mod4R = {
+Mapping dfkWinL = {
+	.key = { VK_LWIN, 91 },
+	.hold = { VK_LMENU, 56, false },
+	.tap = NULL,
+	.state = RELEASED,
+	.changed = 0,
+	.n = &dfkCtrlL
+};
+
+Mapping dfkAltL = {
+	.key = { VK_LMENU, 56 },
+	.hold = { VK_LCONTROL, 29, false },
+	.tap = &(Tap){ { VK_ESCAPE, 1, false }, NULL },
+	.state = RELEASED,
+	.changed = 0,
+	.n = &dfkWinL
+};
+
+Mapping dfkAltGr = {
+	.key = { VK_RMENU, 56 },
+	.hold = { VK_RMENU, 56, true },
+	.tap = &(Tap){ { VK_RETURN, 28, false }, NULL },
+	.state = RELEASED,
+	.changed = 0,
+	.n = &dfkAltL
+};
+
+Mapping dfkOe = {
 	.key = { 0xDE, 40 },
 	.hold = { 0xBF, 43, false },
 	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
-	.n = &mod3R
+	.n = &dfkAltGr
 };
 
-Mapping mod4L = {
+Mapping dfkLess = {
 	.key = { 0xE2, 86 },
 	.hold = { 0xE2, 86, false },
 	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
 	.state = RELEASED,
 	.changed = 0,
-	.n = &mod4R
+	.n = &dfkOe
 };
 
-Mapping mod3L = {
+Mapping dfkCaps = {
 	.key = { VK_CAPITAL, 58 },
 	.hold = { VK_CAPITAL, 58, false },
 	.tap = &(Tap){ { VK_BACK, 14, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
-	.n = &mod4L
+	.n = &dfkLess
 };
 
 static Cfg cfg = {
 	.tap_millis = DEFAULT_TAP_MILLIS,
 	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
-	.m = &mod3L
+	.m = &dfkCaps
 };
