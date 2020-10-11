@@ -193,7 +193,7 @@ void initLayout() {
 	wcscpy(mappingTableLevel3 + 2, strcmp(layout, "kou-fw623") == 0 ? L"¹²³›‹¥£‚‘’—" : L"¹²³›‹¢¥‚‘’—̊");
 	wcscpy(mappingTableLevel3 + 16, L"…_[]^!<>=&ſ̷");
 	wcscpy(mappingTableLevel3 + 30, L"\\/{}*?()-:@"); // TODO: fix right brace in vscode
-	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';"); // TODO: fix backslash in vscode
+	wcscpy(mappingTableLevel3 + 44, L"#$|~`+%\"';");
 
 	wcscpy(mappingTableLevel4 + 41, L"̇");
 	wcscpy(mappingTableLevel4 +  2, L"ªº№⋮·£¤0/*-¨");
@@ -665,8 +665,8 @@ unsigned getLevel() {
 
 // returns `false` because the keys will be sent by the default handler;
 // must be executed after the neoModState updating because those could be systemKeys
-boolean updateSystemKeyStates(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
-	bool newValue = !isKeyUp;
+boolean updateSystemKeyStates(KBDLLHOOKSTRUCT keyInfo) {
+	bool newValue = !(keyInfo.flags & LLKHF_UP);
 
 	if (isInputKey(keyInfo, systemKey.lCtrl)) modStates.lCtrlIsPressed = newValue;
 	else if (isInputKey(keyInfo, systemKey.lWin)) modStates.lWinIsPressed = newValue;
@@ -737,7 +737,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo) {
 	} else if (handleModKey(keyInfo, modConfig.mod4, &modStates.mod4, false, toggleModLockConditionally)) {
 		return true;
 
-	} else if (updateSystemModStates(keyInfo)) {
+	} else if (updateSystemKeyStates(keyInfo)) {
 		return true;
 
 	} else if (keyInfo.flags == 1) {
