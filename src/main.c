@@ -963,9 +963,9 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
                 m->state = PRESSED;
             break;
         case RELEASED:
-        case CONSUMED:
             m->state = PRESSED;
             break;
+        case CONSUMED:
         case PRESSED:
             break;
     }

@@ -6,7 +6,6 @@
 #define DEFAULT_TAP_MILLIS 200
 #define DEFAULT_DOUBLE_TAP_MILLIS 150
 
-
 typedef struct InputKey {
 	int vk;
 	int scan;
