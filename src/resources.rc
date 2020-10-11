@@ -26,5 +26,5 @@ BEGIN
 END
 
 
-IDI_APPICON ICON "appicon.ico"
-IDI_APPICON_DISABLED ICON "appicon-disabled.ico"
+IDI_APPICON ICON "../images/appicon.ico"
+IDI_APPICON_DISABLED ICON "../images/appicon-disabled.ico"
