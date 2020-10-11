@@ -797,8 +797,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 		return true;
 
 	} else if (keyInfo.flags == 1) {
-		// do nothing else if it has only the isExtendedKey bit set (why?)
-		return false;
+		return false; // do nothing else if it has only the isExtendedKey bit set (why?)
 
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
 		return true;
@@ -809,12 +808,10 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
 		return true;
 	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-		// Numeric keypad -> don't remap
-		return true;
+		return false; // Numeric keypad -> don't remap
 
 	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
-		// numbers 0 to 9 -> don't remap
-		return true;
+		return false; // numbers 0 to 9 -> don't remap
 
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
