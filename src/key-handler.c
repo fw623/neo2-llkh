@@ -1,12 +1,4 @@
 /**
- * Alternative Windows driver for the Neo2 based keyboard layouts:
- * Neo2, (www.neo-layout.org)
- * AdNW, AdNWzjßf, KOY (www.adnw.de)
- * bone (https://web.archive.org/web/20180721192908/http://wiki.neo-layout.org/wiki/Bone)
- * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
- */
-
-/**
  * convention: functions return `true` if they match the input and it
  * should not be processed further; `false` otherwise
  */
