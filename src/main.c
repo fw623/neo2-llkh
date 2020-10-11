@@ -612,6 +612,17 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 		}
 	}
 
+	// remap RETURN to 0 so we can use it when tapping AltGr
+	if (strcmp(layout, "kou-fw623") == 0 && (keyInfo.scanCode == 28))	{
+		printf("\nhello %d \n\n", keyInfo.scanCode);
+		if (keyInfo.flags & LLKHF_UP) {
+			sendUp(VK_NUMPAD0, 82, false);
+		} else {
+			sendDown(VK_NUMPAD0, 82, false);
+		}
+		return true;
+	}
+
 	// A second level 4 mapping table for special (non-unicode) keys.
 	// Maybe this could be included in the global TCHAR mapping table or level 4!?
 	BYTE bScan = 0;
