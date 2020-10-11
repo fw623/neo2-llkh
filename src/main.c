@@ -945,130 +945,129 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 }
 
 void tap(Mapping *m, DWORD flags) {
-    Tap *t;
-    for (t = m->tap; t; t = t->n) {
-				printf("remapped tap\n");
-        write_event(newKeyInfo(t->code, flags));
-    }
+	Tap *t;
+	for (t = m->tap; t; t = t->n) {
+		printf("remapped tap\n");
+		write_event(newKeyInfo(t->code, flags));
+	}
 }
 
 void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
-    // state
-    switch (m->state) {
-        case TAPPED:
-        case DOUBLETAPPED:
-            if (input->time - m->changed < dfkConfig.double_tap_millis)
-                m->state = DOUBLETAPPED;
-            else
-                m->state = PRESSED;
-            break;
-        case RELEASED:
-            m->state = PRESSED;
-            break;
-        case CONSUMED:
-        case PRESSED:
-            break;
-    }
-    m->changed = input->time;
+	printf("down state1: %d\n", m->state);
+	// state
+	switch (m->state) {
+		case TAPPED:
+		case DOUBLETAPPED:
+			if (input->time - m->changed < dfkConfig.double_tap_millis)
+				m->state = DOUBLETAPPED;
+			else
+				m->state = PRESSED;
+			break;
+		case RELEASED:
+			m->state = PRESSED;
+			break;
+		case CONSUMED:
+		case PRESSED:
+			break;
+	}
+	m->changed = input->time;
+	printf("down state2: %d\n", m->state);
 
-    // action
-    switch (m->state) {
-        case TAPPED:
-        case DOUBLETAPPED:
-            tap(m, 0);
-            break;
-        case RELEASED:
-        case PRESSED:
-        case CONSUMED:
-						printf("remapped down\n");
-            write_event(newKeyInfo(m->hold, input->flags));
-            break;
-    }
+	// action
+	switch (m->state) {
+		case TAPPED:
+		case DOUBLETAPPED:
+			tap(m, 0);
+			break;
+		case RELEASED:
+		case PRESSED:
+		case CONSUMED:
+			printf("remapped down\n");
+			write_event(newKeyInfo(m->hold, input->flags));
+			break;
+	}
 }
 
 void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
-    // state
-    switch (m->state) {
-        case PRESSED:
-            if (input->time - m->changed < dfkConfig.tap_millis)
-                m->state = TAPPED;
-            else
-                m->state = RELEASED;
-            break;
-        case TAPPED:
-        case DOUBLETAPPED:
-            break;
-        case CONSUMED:
-            m->state = RELEASED;
-            break;
-        case RELEASED:
-            break;
-    }
-    m->changed = input->time;
+	printf("up   state1: %d\n", m->state);
+	// state
+	switch (m->state) {
+		case PRESSED:
+			if (input->time - m->changed < dfkConfig.tap_millis)
+				m->state = TAPPED;
+			else
+				m->state = RELEASED;
+			break;
+		case TAPPED:
+		case DOUBLETAPPED:
+			break;
+		case CONSUMED:
+			m->state = RELEASED;
+			break;
+		case RELEASED:
+			break;
+	}
+	m->changed = input->time;
+	printf("up   state2: %d\n", m->state);
 
-    // action
-    switch (m->state) {
-        case TAPPED:
-						printf("remapped release\n");
-            // release
-            write_event(newKeyInfo(m->hold, input->flags));
+	// action
+	switch (m->state) {
+		case TAPPED:
+			printf("remapped release\n");
+			// release
+			write_event(newKeyInfo(m->hold, input->flags));
 
-            // synthesize tap
-            tap(m, 0);
-            tap(m, LLKHF_UP);
-            break;
-        case DOUBLETAPPED:
-            tap(m, LLKHF_UP);
-            break;
-        case CONSUMED:
-        case RELEASED:
-        case PRESSED:
-						printf("remapped up\n");
-            write_event(newKeyInfo(m->hold, input->flags));
-            break;
-    }
+			// synthesize tap
+			tap(m, 0);
+			tap(m, LLKHF_UP);
+			break;
+		case DOUBLETAPPED:
+			tap(m, LLKHF_UP);
+			break;
+		case CONSUMED:
+		case RELEASED:
+		case PRESSED:
+			printf("remapped up\n");
+			write_event(newKeyInfo(m->hold, input->flags));
+			break;
+	}
 }
 
 void consume_pressed() {
-
-    // state
-    for (Mapping *m = dfkConfig.m; m; m = m->n) {
-        switch (m->state) {
-            case PRESSED:
-                m->state = CONSUMED;
-                break;
-            case TAPPED:
-            case DOUBLETAPPED:
-            case RELEASED:
-            case CONSUMED:
-                break;
-        }
-    }
+	// state
+	for (Mapping *m = dfkConfig.m; m; m = m->n) {
+		switch (m->state) {
+			case PRESSED:
+				m->state = CONSUMED;
+				break;
+			case TAPPED:
+			case DOUBLETAPPED:
+			case RELEASED:
+			case CONSUMED:
+				break;
+		}
+	}
 }
 
-bool
-dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
-    Mapping *m;
+bool dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
+	Mapping *m;
 
-    // consume all taps that are incomplete
-    if (!(input->flags & LLKHF_UP))
-        consume_pressed();
+	// consume all taps that are incomplete
+	if (!(input->flags & LLKHF_UP)) consume_pressed();
 
-    // is this our key?
-    for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
+	// is this our key?
+	for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
 
-    // forward all other key events
-    if (!m) {
-        // write_event(*input);
-        return false;
-    }
+	// forward all other key events
+	if (!m) return false;
 
-    if (input->flags & LLKHF_UP) {
-        handle_release(m, input);
-    } else {
-        handle_press(m, input);
-    }
-		return true;
+	if (input->flags & LLKHF_UP) {
+		handle_release(m, input);
+	} else {
+		handle_press(m, input);
+	}
+
+	return true;
 }
 
 __declspec(dllexport)
