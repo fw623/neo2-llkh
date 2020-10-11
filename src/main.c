@@ -740,50 +740,21 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	);
 }
 
+bool modIsActive (NeoModState state) {
+	return (state.leftIsPressed || state.rightIsPressed) != state.isLocked;
+}
+
 unsigned getLevel() {
 	unsigned level = 1;
 
-	if (modState.shift != shiftLockActive) // (modState.shift) XOR (shiftLockActive)
+	if (modIsActive(modKeyStates.shift))
 		level = 2;
-	if ((modKeyStates.mod3.leftIsPressed || modKeyStates.mod3.rightIsPressed) != modKeyStates.mod3.isLocked)
+	if (modIsActive(modKeyStates.mod3))
 		level = (supportLevels5and6 && level == 2) ? 5 : 3;
-	if ((modKeyStates.mod4.leftIsPressed || modKeyStates.mod4.rightIsPressed) != modKeyStates.mod4.isLocked)
+	if (modIsActive(modKeyStates.mod4))
 		level = (supportLevels5and6 && level == 3) ? 6 : 4;
 
 	return level;
-}
-
-/**
- * returns `true` if execution shall be continued, `false` otherwise
- **/
-boolean handleShiftKey(KBDLLHOOKSTRUCT keyInfo, WPARAM wparam, bool ignoreShiftCapsLock)
-{
-	bool *pressedShift = keyInfo.vkCode == VK_RSHIFT ? &shiftRightPressed : &shiftLeftPressed;
-	bool *otherShift = keyInfo.vkCode == VK_RSHIFT ? &shiftLeftPressed : &shiftRightPressed;
-
-	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-		modState.shift = false;
-		*pressedShift = false;
-
-		if (*otherShift && !ignoreShiftCapsLock) {
-			if (shiftLockEnabled) {
-				sendDownUp(VK_CAPITAL, 58, false);
-				toggleShiftLock();
-			} else if (capsLockEnabled) {
-				sendDownUp(VK_CAPITAL, 58, false);
-				toggleCapsLock();
-			}
-		}
-		sendUp(keyInfo.vkCode, keyInfo.scanCode, false);
-		return false;
-	}	else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		modState.shift = true;
-		*pressedShift = true;
-		sendDown(keyInfo.vkCode, keyInfo.scanCode, false);
-		return false;
-	}
-
-	return true;
 }
 
 /**
@@ -836,25 +807,45 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	return true;
 }
 
-bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state) {
+void toggleModLockConditionally(bool *isLocked, bool isKeyUp, bool ignoreLocking) {
+	if (!isKeyUp && !ignoreLocking) {
+		*isLocked = !(*isLocked);
+	}
+}
+
+// also toggle CapsLock (for keyboard LED)
+void toggleModLockConditionallyShift(bool *isLocked, bool isKeyUp, bool ignoreLocking) {
+	if (!isKeyUp && !ignoreLocking) {
+		// TODO: fix NumberRow characters during lock
+
+		// NOTE: when sending CapsLock like this, we mustn't use the internal isLocked state
+		// because these 2 interfere with each other
+		// the probably cleaner solution is to use only the internal state and ignore the CapsLock LED
+
+		sendDownUp(VK_CAPITAL, 58, false);
+		toggleCapsLock();
+	}
+}
+
+// ignoreLocking - is used for shift key during bypassMode
+bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state, bool ignoreLocking, void (*toggleLockConditionally)(bool *, bool, bool)) {
 	if (mod.lock && isInputKey(keyInfo, *mod.lock)) {
-		if (!isKeyUp) {
-			state->isLocked = !state->isLocked;
-		}
+		toggleLockConditionally(&state->isLocked, isKeyUp, ignoreLocking);
 		return true;
 	} else if (isInputKey(keyInfo, mod.left)) {
 		state->leftIsPressed = !isKeyUp;
-		if (mod.bothLock && state->rightIsPressed && !isKeyUp) {
-			state->isLocked = !state->isLocked;
+		if (mod.bothLock && state->rightIsPressed) {
+			toggleLockConditionally(&state->isLocked, isKeyUp, ignoreLocking);
 		}
 		return true;
 	} else if (isInputKey(keyInfo, mod.right)) {
 		state->rightIsPressed = !isKeyUp;
-		if (mod.bothLock && state->leftIsPressed && !isKeyUp) {
-			state->isLocked = !state->isLocked;
+		if (mod.bothLock && state->leftIsPressed) {
+			toggleLockConditionally(&state->isLocked, isKeyUp, ignoreLocking);
 		}
 		return true;
 	}
+
 	return false;
 }
 
@@ -869,9 +860,9 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 
 	unsigned level = getLevel();
 
-	if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3)) {
+	if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3, false, toggleModLockConditionally)) {
 		return false;
-	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4)) {
+	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4, false, toggleModLockConditionally)) {
 		return false;
 	} else if (keyInfo.flags == 1) {
 		return true;
@@ -904,13 +895,13 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
 
-	if (isShift(keyInfo)) {
-		bool continueExecution = handleShiftKey(keyInfo, wparam, bypassMode);
-		if (!continueExecution) return true;
+	// handle shift here; necessary because we need to track it also in bypassMode
+	if (handleModKey(keyInfo, keyInfo.flags & LLKHF_UP, modKeyConfigs.shift, &modKeyStates.shift, bypassMode, toggleModLockConditionallyShift)) {
+		return false;
 	}
 
 	// Shift + Pause
-	if (wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && modState.shift) {
+	if (wparam == WM_KEYDOWN && keyInfo.vkCode == VK_PAUSE && (modKeyStates.shift.leftIsPressed || modKeyStates.shift.rightIsPressed)) {
 		toggleBypassMode();
 		return true;
 	}
@@ -931,7 +922,6 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	// skip LCONTROL sent by pressing ALTGR
 	if (keyInfo.scanCode == 541) return true;
 
-
 	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 		logKeyEvent("key up", keyInfo);
 
@@ -949,6 +939,7 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 		if (!callNext) return true;
 	}
 
+	// send the incoming key if nothing matches
 	keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
 	return true;
 }
