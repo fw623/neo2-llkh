@@ -29,8 +29,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  **/
 
-
 #include "dfk.h"
+
+unsigned levelOfLastPress = 1;
 
 KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
 	KBDLLHOOKSTRUCT keyInfo = {
@@ -46,13 +47,12 @@ KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
 void tap(Mapping *m, DWORD flags) {
 	Tap *t;
 	for (t = m->tap; t; t = t->n) {
-		// printf("remapped tap\n");
-		writeEvent(newKeyInfo(t->code, flags));
+		// use level of last press so tapping behaves like an actual key
+		writeEvent(newKeyInfo(t->code, flags), levelOfLastPress);
 	}
 }
 
 void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	// printf("down state1: %d\n", m->state);
 	// state
 	switch (m->state) {
 		case RELEASED:
@@ -69,15 +69,14 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			break;
 	}
 	m->changed = input->time;
-	// printf("down state2: %d\n", m->state);
+	levelOfLastPress = getLevel();
 
 	// action
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
 		case CONSUMED:
-			// printf("remapped down\n");
-			writeEvent(newKeyInfo(m->hold, input->flags));
+			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
 			break;
 		case TAPPED:
 		case DOUBLETAPPED:
@@ -87,7 +86,6 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 }
 
 void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	// printf("up   state1: %d\n", m->state);
 	// state
 	switch (m->state) {
 		case RELEASED:
@@ -104,20 +102,17 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			break;
 	}
 	m->changed = input->time;
-	// printf("up   state2: %d\n", m->state);
 
 	// action
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
 		case CONSUMED:
-			// printf("remapped up\n");
-			writeEvent(newKeyInfo(m->hold, input->flags));
+			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
 			break;
 		case TAPPED:
-			// printf("remapped release\n");
 			// release "hold"
-			writeEvent(newKeyInfo(m->hold, input->flags));
+			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
 			// synthesize tap
 			tap(m, 0);
 			tap(m, LLKHF_UP);

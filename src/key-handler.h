@@ -16,6 +16,8 @@ void toggleBypassMode();
 
 bool isInputKey(KBDLLHOOKSTRUCT actual, InputKey desired);
 
-bool writeEvent(const KBDLLHOOKSTRUCT keyInfo);
+bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level);
+
+unsigned getLevel();
 
 #endif /* KEY_HANDLER_H_ */

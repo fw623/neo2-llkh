@@ -422,36 +422,26 @@ bool handleModKey(KBDLLHOOKSTRUCT keyInfo, ModTypeConfig mod, NeoModState *state
 }
 
 // updates system key and layerLock states; writes key
-bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo) {
-	unsigned level = getLevel();
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, unsigned level) {
+	if (handleModKey(keyInfo, modConfig.mod3, &modStates.mod3, false, toggleModLockConditionally)) return true;
+	if (handleModKey(keyInfo, modConfig.mod4, &modStates.mod4, false, toggleModLockConditionally)) return true;
 
-	if (handleModKey(keyInfo, modConfig.mod3, &modStates.mod3, false, toggleModLockConditionally)) {
-		return true;
+	// must be after the neoModState updating because those could be systemKeys
+	if (updateSystemKeyStates(keyInfo)) return true;
 
-	} else if (handleModKey(keyInfo, modConfig.mod4, &modStates.mod4, false, toggleModLockConditionally)) {
-		return true;
+	// do nothing else if it has only the isExtendedKey bit set (why?)
+	if (keyInfo.flags == 1) return false;
 
-	} else if (updateSystemKeyStates(keyInfo)) {
-		return true;
+	if (level == 2 && handleLayer2SpecialCases(keyInfo)) return true;
+	if (level == 3 && handleLayer3SpecialCases(keyInfo)) return true;
+	if (level == 4 && handleLayer4SpecialCases(keyInfo)) return true;
 
-	} else if (keyInfo.flags == 1) {
-		return false; // do nothing else if it has only the isExtendedKey bit set (why?)
+	// Numeric keypad -> don't remap
+	if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) return false;
+	// numbers 0 to 9 -> don't remap
+	if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) return false;
 
-	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
-		return true;
-
-	} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
-		return true;
-
-	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
-		return true;
-	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
-		return false; // Numeric keypad -> don't remap
-
-	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
-		return false; // numbers 0 to 9 -> don't remap
-
-	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
+	if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
 		if (capsLockActive && (level == 1 || level == 2) && isLetter(key)) {
 			key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
@@ -481,7 +471,7 @@ void toggleBypassMode() {
 	printf("%i bypass mode \n", bypassMode);
 }
 
-bool writeEvent(const KBDLLHOOKSTRUCT keyInfo) {
+bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level) {
 	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
 
 	// handle shift here; necessary because we need to track it also in bypassMode
@@ -512,7 +502,7 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo) {
 	if (keyInfo.scanCode == 541) return true;
 
 	logKeyEvent("key", keyInfo);
-	if (updateStatesAndWriteKey(keyInfo)) return true;
+	if (updateStatesAndWriteKey(keyInfo, level)) return true;
 
 	// send the incoming key if nothing matches
 	sendKey(keyInfo);
@@ -558,7 +548,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	currentKey.key.scan = keyInfo.scanCode;
 	currentKey.time = 0;
 
-	if (writeEvent(keyInfo)) return -1;
+	if (writeEvent(keyInfo, getLevel())) return -1;
 
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }
