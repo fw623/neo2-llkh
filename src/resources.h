@@ -1,2 +1,7 @@
+#ifndef RESOURCES_H_
+#define RESOURCES_H_
+
 #define IDI_APPICON 101
 #define IDI_APPICON_DISABLED 102
+
+#endif /* RESOURCES_H_ */

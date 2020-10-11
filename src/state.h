@@ -1,3 +1,6 @@
+#ifndef STATE_H_
+#define STATE_H_
+
 typedef struct NeoModState {
 	bool leftIsPressed,
 		rightIsPressed,
@@ -16,6 +19,11 @@ typedef struct ModStates {
 		rCtrlIsPressed;
 } ModStates;
 
+typedef struct LastKey {
+	InputKey key;
+	DWORD time;
+} LastKey;
+
 /* ============ VALUES ============ */
 
 ModStates modStates = {
@@ -29,3 +37,10 @@ ModStates modStates = {
 	.rWinIsPressed = false,
 	.rCtrlIsPressed = false
 };
+
+bool shiftLockActive = false;
+bool capsLockActive = false;
+bool bypassMode = false; // true if no mapping should be done
+LastKey lastKey;
+
+#endif /* STATE_H_ */

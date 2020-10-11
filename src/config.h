@@ -1,8 +1,9 @@
-#ifndef _GUARD_WINDOWS
-  #define _GUARD_WINDOWS
-  #include <windows.h>
-#endif
+#ifndef CONFIG_H_
+#define CONFIG_H_
 
+#include <windows.h>
+
+#define LEN 103
 #define DEFAULT_TAP_MILLIS 200
 #define DEFAULT_DOUBLE_TAP_MILLIS 150
 
@@ -60,6 +61,29 @@ typedef struct SystemKey {
 } SystemKey;
 
 /* ============ VALUES ============ */
+
+/**
+ * Some global settings.
+ * These values can be set in a configuration file (settings.ini)
+ */
+char layout[100];                    // keyboard layout (default: neo)
+bool debugWindow = false;            // show debug output in a separate console window
+bool capsLockEnabled = false;        // enable (allow) caps lock
+bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
+bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
+bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
+
+/**
+ * Mapping tables for four levels.
+ * They will be defined in initLayout().
+ */
+TCHAR mappingTableLevel1[LEN];
+TCHAR mappingTableLevel2[LEN];
+TCHAR mappingTableLevel3[LEN];
+TCHAR mappingTableLevel4[LEN];
+TCHAR mappingTableLevel5[LEN];
+TCHAR mappingTableLevel6[LEN];
+CHAR mappingTableLevel4Special[LEN];
 
 Mapping dfkCtrlL = {
 	.key = { VK_LCONTROL, 29 },
@@ -159,3 +183,5 @@ static ModConfig modConfig = {
 		.bothLock = false
 	}
 };
+
+#endif /* CONFIG_H_ */
