@@ -15,7 +15,7 @@
 
 #include <windows.h>
 #include <tchar.h>
-#include "trayicon.h"
+#include "tray-icon.h"
 #include "resources.h"
 
 #define WM_ICON_CLICK (WM_USER+1)

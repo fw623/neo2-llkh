@@ -13,8 +13,8 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TRAYICON_H_
-#define TRAYICON_H_
+#ifndef TRAY_ICON_H_
+#define TRAY_ICON_H_
 
 #include <windows.h>
 #include <stdbool.h>
@@ -27,4 +27,4 @@ void trayicon_remove();
 
 void trayicon_add_item(char *text, callback_functionPtr functionPtr);
 
-#endif /* TRAYICON_H_ */
+#endif /* TRAY_ICON_H_ */

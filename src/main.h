@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <io.h>
 
-#include "trayicon.h"
+#include "tray-icon.h"
 #include "resources.h"
 #include "init-layout.h"
 #include "config.h"

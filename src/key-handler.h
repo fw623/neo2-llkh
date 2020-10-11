@@ -7,7 +7,7 @@
 #include "resources.h"
 #include "config.h"
 #include "states.h"
-#include "trayicon.h"
+#include "tray-icon.h"
 
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam);
 
