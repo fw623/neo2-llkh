@@ -55,6 +55,10 @@ typedef struct ModConfig {
 	ModTypeConfig shift, mod3, mod4;
 } ModConfig;
 
+typedef struct SystemKey {
+	InputKey lCtrl, lWin, lAlt, rAlt, rWin, rCtrl;
+} SystemKey;
+
 /* ============ VALUES ============ */
 
 Mapping dfkCtrlL = {
@@ -124,6 +128,15 @@ static DfkConfig dfkConfig = {
 	.tap_millis = DEFAULT_TAP_MILLIS,
 	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
 	.m = &dfkCaps
+};
+
+static SystemKey systemKey = {
+	.lCtrl = { VK_LCONTROL, 29 },
+	.lWin = { VK_LWIN, 91 },
+	.lAlt = { VK_LMENU, 56 },
+	.rAlt = { VK_RMENU, 56 },
+	.rWin = { VK_RWIN, 92 },
+	.rCtrl = { VK_RCONTROL, 29 }
 };
 
 static ModConfig modConfig = {

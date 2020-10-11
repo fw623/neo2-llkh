@@ -4,28 +4,28 @@ typedef struct NeoModState {
 		isLocked;
 } NeoModState;
 
-typedef struct ModKeyStates {
+typedef struct ModStates {
 	NeoModState shift,
 		mod3,
 		mod4;
 	bool lCtrlIsPressed,
-		rCtrlIsPressed,
+		lWinIsPressed,
 		lAltIsPressed,
 		rAltIsPressed,
-		lMetaIsPressed,
-		rMetaIsPressed;
-} ModKeyStates;
+		rWinIsPressed,
+		rCtrlIsPressed;
+} ModStates;
 
 /* ============ VALUES ============ */
 
-ModKeyStates modKeyStates = {
+ModStates modStates = {
 	.shift = { false, false, false },
 	.mod3 = { false, false, false },
 	.mod4 = { false, false, false },
 	.lCtrlIsPressed = false,
-	.rCtrlIsPressed = false,
+	.lWinIsPressed = false,
 	.lAltIsPressed = false,
 	.rAltIsPressed = false,
-	.lMetaIsPressed = false,
-	.rMetaIsPressed = false,
+	.rWinIsPressed = false,
+	.rCtrlIsPressed = false
 };
