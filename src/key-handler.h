@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "resources.h"
 #include "config.h"
-#include "state.h"
+#include "states.h"
 #include "trayicon.h"
 
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam);

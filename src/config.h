@@ -2,6 +2,7 @@
 #define CONFIG_H_
 
 #include <windows.h>
+#include <stdbool.h>
 
 #define LEN 103
 #define DEFAULT_TAP_MILLIS 200
@@ -66,12 +67,12 @@ typedef struct SystemKey {
  * Some global settings.
  * These values can be set in a configuration file (settings.ini)
  */
-char layout[100];                    // keyboard layout (default: neo)
-bool debugWindow = false;            // show debug output in a separate console window
-bool capsLockEnabled = false;        // enable (allow) caps lock
-bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
-bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
-bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
+char layout[100];                   // keyboard layout (default: neo)
+extern bool debugWindow;            // show debug output in a separate console window
+extern bool capsLockEnabled;        // enable (allow) caps lock
+extern bool shiftLockEnabled;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
+extern bool qwertzForShortcuts;     // use QWERTZ when Ctrl, Alt or Win is involved
+extern bool supportLevels5and6;     // support levels five and six (greek letters and mathematical symbols)
 
 /**
  * Mapping tables for four levels.
@@ -85,103 +86,8 @@ TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
 CHAR mappingTableLevel4Special[LEN];
 
-Mapping dfkCtrlL = {
-	.key = { VK_LCONTROL, 29 },
-	.hold = { VK_LWIN, 91, true },
-	.tap = NULL,
-	.state = RELEASED,
-	.changed = 0,
-	.n = NULL
-};
-
-Mapping dfkWinL = {
-	.key = { VK_LWIN, 91 },
-	.hold = { VK_LMENU, 56, false },
-	.tap = NULL,
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkCtrlL
-};
-
-Mapping dfkAltL = {
-	.key = { VK_LMENU, 56 },
-	.hold = { VK_LCONTROL, 29, false },
-	.tap = &(Tap){ { VK_ESCAPE, 1, false }, NULL },
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkWinL
-};
-
-Mapping dfkAltGr = {
-	.key = { VK_RMENU, 56 },
-	.hold = { VK_RMENU, 56, true },
-	.tap = &(Tap){ { VK_RETURN, 28, false }, NULL },
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkAltL
-};
-
-Mapping dfkOe = {
-	.key = { 0xDE, 40 },
-	.hold = { 0xBF, 43, false },
-	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkAltGr
-};
-
-Mapping dfkLess = {
-	.key = { 0xE2, 86 },
-	.hold = { 0xE2, 86, false },
-	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkOe
-};
-
-Mapping dfkCaps = {
-	.key = { VK_CAPITAL, 58 },
-	.hold = { VK_CAPITAL, 58, false },
-	.tap = &(Tap){ { VK_BACK, 14, false }, NULL },
-	.state = RELEASED,
-	.changed = 0,
-	.n = &dfkLess
-};
-
-static DfkConfig dfkConfig = {
-	.tap_millis = DEFAULT_TAP_MILLIS,
-	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
-	.m = &dfkCaps
-};
-
-static SystemKey systemKey = {
-	.lCtrl = { VK_LCONTROL, 29 },
-	.lWin = { VK_LWIN, 91 },
-	.lAlt = { VK_LMENU, 56 },
-	.rAlt = { VK_RMENU, 56 },
-	.rWin = { VK_RWIN, 92 },
-	.rCtrl = { VK_RCONTROL, 29 }
-};
-
-static ModConfig modConfig = {
-	.shift = {
-		.lock = NULL,
-		.left = { VK_LSHIFT, 42 },
-		.right = { VK_RSHIFT, 54 },
-		.bothLock = true
-	},
-	.mod3 = {
-		.lock = NULL,
-		.left = { VK_CAPITAL, 58 },
-		.right = { VK_RMENU, 56 },
-		.bothLock = false
-	},
-	.mod4 = {
-		.lock = &(InputKey){ VK_RCONTROL, 29 },
-		.left = { 0xE2, 86 }, // > key
-		.right = { 0xBF, 43 }, // # key
-		.bothLock = false
-	}
-};
+extern DfkConfig dfkConfig;
+extern SystemKey systemKey;
+extern ModConfig modConfig;
 
 #endif /* CONFIG_H_ */
