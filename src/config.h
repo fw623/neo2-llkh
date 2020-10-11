@@ -126,7 +126,7 @@ static DfkConfig dfkConfig = {
 	.m = &dfkCaps
 };
 
-ModKeyConfigs modKeyConfigs = {
+static ModKeyConfigs modKeyConfigs = {
 	.shift = {
 		.lock = NULL,
 		.left = { VK_LSHIFT, 42 },

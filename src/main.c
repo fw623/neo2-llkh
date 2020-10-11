@@ -22,10 +22,6 @@
 #include "config.h"
 #include "state.h"
 
-typedef struct SimpleModState {
-	bool shift, mod3, mod4;
-} SimpleModState;
-
 typedef struct LastKey {
 	InputKey key;
 	time_t time;
@@ -48,29 +44,10 @@ HHOOK keyhook = NULL;
  */
 char layout[100];                    // keyboard layout (default: neo)
 bool debugWindow = false;            // show debug output in a separate console window
-bool quoteAsMod3R = false;           // use quote/ä as right level 3 modifier
-bool returnAsMod3R = false;          // use return as right level 3 modifier
-bool tabAsMod4L = false;             // use tab as left level 4 modifier
-DWORD scanCodeMod3L = SCANCODE_CAPSLOCK_KEY;
-DWORD scanCodeMod4R = SCANCODE_HASH_KEY;       // depends on quoteAsMod3R and returnAsMod3R
-DWORD scanCodeMod4L = SCANCODE_LOWER_THAN_KEY; // depends on tabAsMod4L
 bool capsLockEnabled = false;        // enable (allow) caps lock
 bool shiftLockEnabled = false;       // enable (allow) shift lock (disabled if capsLockEnabled is true)
-bool level4LockEnabled = false;      // enable (allow) level 4 lock (toggle by pressing both Mod4 keys at the same time)
 bool qwertzForShortcuts = false;     // use QWERTZ when Ctrl, Alt or Win is involved
-bool swapLeftCtrlAndLeftAlt = false; // swap left Ctrl and left Alt key
-bool swapLeftCtrlLeftAltAndLeftWin = false;  // swap left Ctrl, left Alt key and left Win key. Resulting order: Win, Alt, Ctrl (on a standard Windows keyboard)
 bool supportLevels5and6 = false;     // support levels five and six (greek letters and mathematical symbols)
-bool capsLockAsEscape = false;       // if true, hitting CapsLock alone sends Esc
-bool mod3RAsReturn = false;          // if true, hitting Mod3R alone sends Return
-bool mod4LAsTab = false;             // if true, hitting Mod4L alone sends Tab
-SendKey mod4LTapOld = { VK_DELETE, 83, true };
-
-// @TODO: implement proper modifier tapping and key remapping (for ctrl, alt, ...)
-
-
-LastKey lastKey; // this saves the last keypress and is used for taps
-int maxTapMillisec = 150;
 
 /**
  * True if no mapping should be done
@@ -102,7 +79,7 @@ bool altLeftPressed = false;
 bool winLeftPressed = false;
 bool winRightPressed = false;
 
-SimpleModState modState = { false, false, false };
+LastKey lastKey;
 
 /**
  * Mapping tables for four levels.
@@ -336,18 +313,6 @@ void initLayout()
 		wcscpy(mappingTableLevel6 +  2, L"¬∨∧⊥∡∥→∞∝⌀?̄");
 		wcscpy(mappingTableLevel6 + 27, L"˘");
 		mappingTableLevel6[57] = 0x202f;  // space = narrow no-break space
-	}
-
-	// if quote/ä is the right level 3 modifier, copy symbol of quote/ä key to backslash/# key
-	if (quoteAsMod3R) {
-		mappingTableLevel1[43] = mappingTableLevel1[40];
-		mappingTableLevel2[43] = mappingTableLevel2[40];
-		mappingTableLevel3[43] = mappingTableLevel3[40];
-		mappingTableLevel4[43] = mappingTableLevel4[40];
-		if (supportLevels5and6) {
-			mappingTableLevel5[43] = mappingTableLevel5[40];
-			mappingTableLevel6[43] = mappingTableLevel6[40];
-		}
 	}
 
 	mappingTableLevel2[8] = 0x20AC;  // €
@@ -680,66 +645,44 @@ void toggleCapsLock()
 void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 {
 	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
-	char *keyName;
-	switch (keyInfo.vkCode) {
-		case VK_LSHIFT:
-			keyName = "(Shift left)";
-			break;
-		case VK_RSHIFT:
-			keyName = "(Shift right)";
-			break;
-		case VK_SHIFT:
-			keyName = "(Shift)";
-			break;
-		case VK_CAPITAL:
-			keyName = "(M3 left)";
-			break;
-		case 0xde:  // ä
-			keyName = quoteAsMod3R ? "(M3 right)" : "";
-			break;
-		case 0xbf:  // #
-			keyName = quoteAsMod3R ? "" : "(M3 right)";
-			break;
-		case VK_OEM_102:
-			keyName = "(M4 left [<])";
-			break;
-		case VK_CONTROL:
-			keyName = "(Ctrl)";
-			break;
-		case VK_LCONTROL:
-			keyName = "(Ctrl left)";
-			break;
-		case VK_RCONTROL:
-			keyName = "(Ctrl right)";
-			break;
-		case VK_MENU:
-			keyName = "(Alt)";
-			break;
-		case VK_LMENU:
-			keyName = "(Alt left)";
-			break;
-		case VK_RMENU:
-			keyName = "(Alt right)";
-			break;
-		case VK_LWIN:
-			keyName = "(Win left)";
-			break;
-		case VK_RWIN:
-			keyName = "(Win right)";
-			break;
-		case VK_BACK:
-			keyName = "(Backspace)";
-			break;
-		case VK_RETURN:
-			keyName = "(Return)";
-			break;
-		case 0x41 ... 0x5A:
-			keyName = vkCodeLetter;
-			break;
-		default:
-			keyName = "";
-			//keyName = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
+	char *keyName = "";
+
+	if (keyInfo.vkCode == modKeyConfigs.shift.left.vk) {
+		keyName = "(Shift left)";
+	} else if (keyInfo.vkCode == modKeyConfigs.shift.right.vk) {
+		keyName = "(Shift right)";
+	} else if (keyInfo.vkCode == modKeyConfigs.mod3.left.vk) {
+		keyName = "(M3 left)";
+	} else if (keyInfo.vkCode == modKeyConfigs.mod3.right.vk) {
+		keyName = "(M3 right)";
+	} else if (keyInfo.vkCode == modKeyConfigs.mod4.left.vk) {
+		keyName = "(M4 left)";
+	} else if (keyInfo.vkCode == modKeyConfigs.mod4.right.vk) {
+		keyName = "(M4 right)";
+	} else if (keyInfo.vkCode == VK_SHIFT) {
+		keyName = "(Shift)";
+	} else if (keyInfo.vkCode == VK_CONTROL) {
+		keyName = "(Ctrl)";
+	} else if (keyInfo.vkCode == VK_LCONTROL) {
+		keyName = "(Ctrl left)";
+	} else if (keyInfo.vkCode == VK_RCONTROL) {
+		keyName = "(Ctrl right)";
+	} else if (keyInfo.vkCode == VK_MENU) {
+		keyName = "(Alt)";
+	} else if (keyInfo.vkCode == VK_LMENU) {
+		keyName = "(Alt left)";
+	} else if (keyInfo.vkCode == VK_RMENU) {
+		keyName = "(Alt right)";
+	} else if (keyInfo.vkCode == VK_LWIN) {
+		keyName = "(Win left)";
+	} else if (keyInfo.vkCode == VK_RWIN) {
+		keyName = "(Win right)";
+	} else if (keyInfo.vkCode == VK_BACK) {
+		keyName = "(Backspace)";
+	} else if (keyInfo.vkCode == VK_RETURN) {
+		keyName = "(Return)";
 	}
+
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
 						: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
@@ -777,41 +720,28 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 
 	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
-		if (swapLeftCtrlAndLeftAlt) {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		} else if (swapLeftCtrlLeftAltAndLeftWin) {
-			winLeftPressed = newStateValue;
-			keybd_event(VK_LWIN, 91, dwFlags, 0);
-		} else {
-			ctrlLeftPressed = newStateValue;
-			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
-		}
+		ctrlLeftPressed = newStateValue;
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
 		return false;
+
 	} else if (keyInfo.vkCode == VK_RCONTROL) {
 		ctrlRightPressed = newStateValue;
-		keybd_event(VK_RCONTROL, 29, dwFlags, 0);
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
+		return false;
+
 	} else if (keyInfo.vkCode == VK_LMENU) {
-		if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin) {
-			ctrlLeftPressed = newStateValue;
-			keybd_event(VK_LCONTROL, 29, dwFlags, 0);
-		} else {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		}
+		altLeftPressed = newStateValue;
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
 		return false;
+
 	} else if (keyInfo.vkCode == VK_LWIN) {
-		if (swapLeftCtrlLeftAltAndLeftWin) {
-			altLeftPressed = newStateValue;
-			keybd_event(VK_LMENU, 56, dwFlags, 0);
-		} else {
-			winLeftPressed = newStateValue;
-			keybd_event(VK_LWIN, 91, dwFlags, 0);
-		}
+		winLeftPressed = newStateValue;
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
 		return false;
+
 	} else if (keyInfo.vkCode == VK_RWIN) {
 		winRightPressed = newStateValue;
-		keybd_event(VK_RWIN, 92, dwFlags, 0);
+		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
 		return false;
 	}
 
@@ -1104,7 +1034,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	}
 
 	printf("\n");
-	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "actual up" : "actual down", keyInfo);
+	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "input up" : "input down", keyInfo);
 
 
 	// remap keys and handle tapping
@@ -1202,44 +1132,17 @@ int main(int argc, char *argv[])
 
 		GetPrivateProfileStringA("Settings", "layout", "neo", layout, 100, ini);
 
-		GetPrivateProfileStringA("Settings", "symmetricalLevel3Modifiers", "0", returnValue, 100, ini);
-		quoteAsMod3R = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "returnKeyAsMod3R", "0", returnValue, 100, ini);
-		returnAsMod3R = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "tabKeyAsMod4L", "0", returnValue, 100, ini);
-		tabAsMod4L = (strcmp(returnValue, "1") == 0);
-
 		GetPrivateProfileStringA("Settings", "capsLockEnabled", "0", returnValue, 100, ini);
 		capsLockEnabled = (strcmp(returnValue, "1") == 0);
 
 		GetPrivateProfileStringA("Settings", "shiftLockEnabled", "0", returnValue, 100, ini);
 		shiftLockEnabled = (strcmp(returnValue, "1") == 0);
 
-		GetPrivateProfileStringA("Settings", "level4LockEnabled", "0", returnValue, 100, ini);
-		level4LockEnabled = (strcmp(returnValue, "1") == 0);
-
 		GetPrivateProfileStringA("Settings", "qwertzForShortcuts", "0", returnValue, 100, ini);
 		qwertzForShortcuts = (strcmp(returnValue, "1") == 0);
 
-		GetPrivateProfileStringA("Settings", "swapLeftCtrlAndLeftAlt", "0", returnValue, 100, ini);
-		swapLeftCtrlAndLeftAlt = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "swapLeftCtrlLeftAltAndLeftWin", "0", returnValue, 100, ini);
-		swapLeftCtrlLeftAltAndLeftWin = (strcmp(returnValue, "1") == 0);
-
 		GetPrivateProfileStringA("Settings", "supportLevels5and6", "0", returnValue, 100, ini);
 		supportLevels5and6 = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "capsLockAsEscape", "0", returnValue, 100, ini);
-		capsLockAsEscape = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "mod3RAsReturn", "0", returnValue, 100, ini);
-		mod3RAsReturn = (strcmp(returnValue, "1") == 0);
-
-		GetPrivateProfileStringA("Settings", "mod4LAsTab", "0", returnValue, 100, ini);
-		mod4LAsTab = (strcmp(returnValue, "1") == 0);
 
 		GetPrivateProfileStringA("Settings", "debugWindow", "0", returnValue, 100, ini);
 		debugWindow = (strcmp(returnValue, "1") == 0);
@@ -1247,37 +1150,25 @@ int main(int argc, char *argv[])
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
 
-		if (swapLeftCtrlLeftAltAndLeftWin)
-			swapLeftCtrlAndLeftAlt = false;
-
 		if (debugWindow)
 			// Open Console Window to see printf output
 			SetStdOutToNewConsole();
 
-		printf("\nEinstellungen aus %s:\n", ini);
+		printf("\nSettings from %s:\n", ini);
 		printf(" Layout: %s\n", layout);
-		printf(" symmetricalLevel3Modifiers: %d\n", quoteAsMod3R);
-		printf(" returnKeyAsMod3R: %d\n", returnAsMod3R);
-		printf(" tabKeyAsMod4L: %d\n", tabAsMod4L);
 		printf(" capsLockEnabled: %d\n", capsLockEnabled);
 		printf(" shiftLockEnabled: %d\n", shiftLockEnabled);
-		printf(" level4LockEnabled: %d\n", level4LockEnabled);
 		printf(" qwertzForShortcuts: %d\n", qwertzForShortcuts);
-		printf(" swapLeftCtrlAndLeftAlt: %d\n", swapLeftCtrlAndLeftAlt);
-		printf(" swapLeftCtrlLeftAltAndLeftWin: %d\n", swapLeftCtrlLeftAltAndLeftWin);
 		printf(" supportLevels5and6: %d\n", supportLevels5and6);
-		printf(" capsLockAsEscape: %d\n", capsLockAsEscape);
-		printf(" mod3RAsReturn: %d\n", mod3RAsReturn);
-		printf(" mod4LAsTab: %d\n", mod4LAsTab);
 		printf(" debugWindow: %d\n\n", debugWindow);
 
 	} else {
-		printf("\nKeine settings.ini gefunden: %s\n\n", ini);
+		printf("\nsettings.ini not found: %s\n\n", ini);
 	}
 
 
 	if (argc >= 2) {
-		printf("Einstellungen von der Kommandozeile:");
+		printf("Settings via command line:");
 		char delimiter[] = "=";
 		char *param, *value;
 		for (int i=1; i< argc; i++) {
@@ -1317,18 +1208,6 @@ int main(int argc, char *argv[])
 						printf("\n Layout: %s", layout);
 					}
 
-				} else if (strcmp(param, "symmetricalLevel3Modifiers") == 0) {
-					quoteAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n symmetricalLevel3Modifiers: %d", quoteAsMod3R);
-
-				} else if (strcmp(param, "returnKeyAsMod3R") == 0) {
-					returnAsMod3R = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n returnKeyAsMod3R: %d", returnAsMod3R);
-
-				} else if (strcmp(param, "tabKeyAsMod4L") == 0) {
-					tabAsMod4L = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n tabKeyAsMod4L: %d", tabAsMod4L);
-
 				} else if (strcmp(param, "capsLockEnabled") == 0) {
 					capsLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n capsLockEnabled: %d", capsLockEnabled);
@@ -1337,40 +1216,16 @@ int main(int argc, char *argv[])
 					shiftLockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n shiftLockEnabled: %d", shiftLockEnabled);
 
-				} else if (strcmp(param, "level4LockEnabled") == 0) {
-					level4LockEnabled = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n level4LockEnabled: %d", level4LockEnabled);
-
 				} else if (strcmp(param, "qwertzForShortcuts") == 0) {
 					qwertzForShortcuts = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n qwertzForShortcuts: %d", qwertzForShortcuts);
-
-				} else if (strcmp(param, "swapLeftCtrlAndLeftAlt") == 0) {
-					swapLeftCtrlAndLeftAlt = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n swapLeftCtrlAndLeftAlt: %d", swapLeftCtrlAndLeftAlt);
-
-				} else if (strcmp(param, "swapLeftCtrlLeftAltAndLeftWin") == 0) {
-					swapLeftCtrlLeftAltAndLeftWin = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n swapLeftCtrlLeftAltAndLeftWin: %d", swapLeftCtrlLeftAltAndLeftWin);
 
 				} else if (strcmp(param, "supportLevels5and6") == 0) {
 					supportLevels5and6 = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n supportLevels5and6: %d", supportLevels5and6);
 
-				} else if (strcmp(param, "capsLockAsEscape") == 0) {
-					capsLockAsEscape = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n capsLockAsEscape: %d", capsLockAsEscape);
-
-				} else if (strcmp(param, "mod3RAsReturn") == 0) {
-					mod3RAsReturn = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n mod3RAsReturn: %d", mod3RAsReturn);
-
-				} else if (strcmp(param, "mod4LAsTab") == 0) {
-					mod4LAsTab = value==NULL ? false : (strcmp(value, "1") == 0);
-					printf("\n mod4LAsTab: %d", mod4LAsTab);
-
 				} else {
-					printf("\nUnbekannter Parameter:%s", param);
+					printf("\nUnknown parameter: %s", param);
 				}
 			} else {
 				printf("\ninvalid arg: %s", argv[i]);
@@ -1379,23 +1234,11 @@ int main(int argc, char *argv[])
 	}
 	printf("\n\n");
 
-	if (quoteAsMod3R)
-		// use ä/quote key instead of #/backslash key as right level 3 modifier
-		scanCodeMod4R = SCANCODE_QUOTE_KEY;
-	else if (returnAsMod3R)
-		// use return key instead of #/backslash as right level 3 modifier
-		// (might be useful for US keyboards because the # key is missing there)
-		scanCodeMod4R = SCANCODE_RETURN_KEY;
-
-	if (tabAsMod4L)
-		// use tab key instead of < key as left level 4 modifier
-		// (might be useful for US keyboards because the < key is missing there)
-		scanCodeMod4L = SCANCODE_TAB_KEY;
-
-	if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin)
-		// catch ctrl-c because it will send keydown for ctrl
-		// but then keyup for alt. Then ctrl would be locked.
-		SetConsoleCtrlHandler(CtrlHandler, TRUE);
+	// TODO: implement this by checking dfkConfig
+	// if (swapLeftCtrlAndLeftAlt || swapLeftCtrlLeftAltAndLeftWin)
+	// 	// catch ctrl-c because it will send keydown for ctrl
+	// 	// but then keyup for alt. Then ctrl would be locked.
+	// 	SetConsoleCtrlHandler(CtrlHandler, TRUE);
 
 	initLayout();
 
