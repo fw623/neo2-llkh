@@ -828,7 +828,7 @@ void toggleModLockConditionallyShift(bool *isLocked, bool isKeyUp, bool ignoreLo
 }
 
 // ignoreLocking - is used for shift key during bypassMode
-bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, NeoModConfig mod, NeoModState *state, bool ignoreLocking, void (*toggleLockConditionally)(bool *, bool, bool)) {
+bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, ModKeyConfig mod, NeoModState *state, bool ignoreLocking, void (*toggleLockConditionally)(bool *, bool, bool)) {
 	if (mod.lock && isInputKey(keyInfo, *mod.lock)) {
 		toggleLockConditionally(&state->isLocked, isKeyUp, ignoreLocking);
 		return true;
@@ -957,7 +957,7 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
     switch (m->state) {
         case TAPPED:
         case DOUBLETAPPED:
-            if (input->time - m->changed < cfg.double_tap_millis)
+            if (input->time - m->changed < dfkConfig.double_tap_millis)
                 m->state = DOUBLETAPPED;
             else
                 m->state = PRESSED;
@@ -990,7 +990,7 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
     // state
     switch (m->state) {
         case PRESSED:
-            if (input->time - m->changed < cfg.tap_millis)
+            if (input->time - m->changed < dfkConfig.tap_millis)
                 m->state = TAPPED;
             else
                 m->state = RELEASED;
@@ -1032,7 +1032,7 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 void consume_pressed() {
 
     // state
-    for (Mapping *m = cfg.m; m; m = m->n) {
+    for (Mapping *m = dfkConfig.m; m; m = m->n) {
         switch (m->state) {
             case PRESSED:
                 m->state = CONSUMED;
@@ -1055,7 +1055,7 @@ dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
         consume_pressed();
 
     // is this our key?
-    for (m = cfg.m; m && !isInputKey(*input, m->key); m = m->n);
+    for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
 
     // forward all other key events
     if (!m) {

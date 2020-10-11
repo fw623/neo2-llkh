@@ -18,15 +18,13 @@ typedef struct SendKey {
 	bool isExtended;
 } SendKey;
 
-// dualFunctionKeys stuff
-
-typedef enum State {
+typedef enum DfkState {
     RELEASED,
     PRESSED,
     TAPPED,
     DOUBLETAPPED,
     CONSUMED,
-} State;
+} DfkState;
 
 typedef struct Tap {
     SendKey code;
@@ -37,51 +35,28 @@ typedef struct Mapping {
     InputKey key;
     SendKey hold;
     Tap *tap;
-    State state;
+    DfkState state;
     DWORD changed;
     struct Mapping *n;
 } Mapping;
 
-typedef struct Cfg {
+typedef struct DfkConfig {
     int tap_millis;
     int double_tap_millis;
     Mapping *m;
-} Cfg;
+} DfkConfig;
 
 // type to define neo modifier keys (i.e. mod3, mod4) and shift
-typedef struct NeoModConfig {
+typedef struct ModKeyConfig {
 	InputKey *lock, left, right;
 	bool bothLock; // should left + right at same time activate lock?
-} NeoModConfig;
+} ModKeyConfig;
 
 typedef struct ModKeyConfigs {
-	NeoModConfig shift, mod3, mod4;
+	ModKeyConfig shift, mod3, mod4;
 } ModKeyConfigs;
 
 /* ============ VALUES ============ */
-
-ModKeyConfigs modKeyConfigs = {
-	.shift = {
-		.lock = NULL,
-		.left = { VK_LSHIFT, 42 },
-		.right = { VK_RSHIFT, 54 },
-		.bothLock = true
-	},
-	.mod3 = {
-		.lock = NULL,
-		.left = { VK_CAPITAL, 58 },
-		.right = { VK_RMENU, 56 },
-		.bothLock = false
-	},
-	.mod4 = {
-		.lock = &(InputKey){ VK_RCONTROL, 29 },
-		.left = { 0xE2, 86 }, // > key
-		.right = { 0xBF, 43 }, // # key
-		.bothLock = false
-	}
-};
-
-// new way below
 
 Mapping dfkCtrlL = {
 	.key = { VK_LCONTROL, 29 },
@@ -146,8 +121,29 @@ Mapping dfkCaps = {
 	.n = &dfkLess
 };
 
-static Cfg cfg = {
+static DfkConfig dfkConfig = {
 	.tap_millis = DEFAULT_TAP_MILLIS,
 	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
 	.m = &dfkCaps
+};
+
+ModKeyConfigs modKeyConfigs = {
+	.shift = {
+		.lock = NULL,
+		.left = { VK_LSHIFT, 42 },
+		.right = { VK_RSHIFT, 54 },
+		.bothLock = true
+	},
+	.mod3 = {
+		.lock = NULL,
+		.left = { VK_CAPITAL, 58 },
+		.right = { VK_RMENU, 56 },
+		.bothLock = false
+	},
+	.mod4 = {
+		.lock = &(InputKey){ VK_RCONTROL, 29 },
+		.left = { 0xE2, 86 }, // > key
+		.right = { 0xBF, 43 }, // # key
+		.bothLock = false
+	}
 };
