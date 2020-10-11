@@ -7,6 +7,11 @@
  * qwertz (https://de.wikipedia.org/wiki/QWERTZ-Tastaturbelegung)
  */
 
+/**
+ * convention: functions return `true` if they match the input and it
+ * should not be processed further; `false` otherwise
+ */
+
 #ifndef _GUARD_WINDOWS
 	#define _GUARD_WINDOWS
 	#include <windows.h>
@@ -61,17 +66,6 @@ bool shiftLeftPressed = false;
 bool shiftRightPressed = false;
 bool shiftLockActive = false;
 bool capsLockActive = false;
-
-bool level3modLeftPressed = false;
-bool level3modRightPressed = false;
-bool level3modLeftAndNoOtherKeyPressed = false;
-bool level3modRightAndNoOtherKeyPressed = false;
-bool level4modLeftAndNoOtherKeyPressed = false;
-bool level4modRightAndNoOtherKeyPressed = false;
-
-bool level4modLeftPressed = false;
-bool level4modRightPressed = false;
-bool level4LockActive = false;
 
 bool ctrlLeftPressed = false;
 bool ctrlRightPressed = false;
@@ -370,12 +364,15 @@ TCHAR mapScanCodeToChar(unsigned level, char in)
  * Maps keyInfo flags (https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct)
  * to dwFlags for keybd_event (https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-keybd_event)
  **/
-DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo)
-{
+DWORD dwFlagsFromKeyInfo(KBDLLHOOKSTRUCT keyInfo) {
 	DWORD dwFlags = 0;
 	if (keyInfo.flags & LLKHF_EXTENDED) dwFlags |= KEYEVENTF_EXTENDEDKEY;
 	if (keyInfo.flags & LLKHF_UP) dwFlags |= KEYEVENTF_KEYUP;
 	return dwFlags;
+}
+
+void sendKey(KBDLLHOOKSTRUCT keyInfo) {
+	keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
 }
 
 void sendDown(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
@@ -424,7 +421,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
-	if (keyScanResult == -1 || shiftLockActive || capsLockActive || level4LockActive
+	if (keyScanResult == -1 || shiftLockActive || capsLockActive || modKeyStates.mod4.isLocked
 		|| (keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39)) {
 		// key not found in the current keyboard layout or shift lock is active
 		//
@@ -454,7 +451,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
 		if (alt) sendDown(VK_MENU, 56, false); // ALT
 		if (shift) sendDown(VK_SHIFT, 42, false);
 
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
+		sendKey(keyInfo);
 
 		if (altgr) sendUp(VK_RMENU, 56, false);
 		if (ctrl) sendUp(VK_CONTROL, 29, false);
@@ -606,13 +603,6 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	return false;
 }
 
-bool isShift(KBDLLHOOKSTRUCT keyInfo)
-{
-	return keyInfo.vkCode == VK_SHIFT
-	    || keyInfo.vkCode == VK_LSHIFT
-	    || keyInfo.vkCode == VK_RSHIFT;
-}
-
 bool isSystemKeyPressed()
 {
 	return ctrlLeftPressed || ctrlRightPressed
@@ -685,7 +675,7 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 
 	char *shiftLockCapsLockInfo = shiftLockActive ? " [shift lock active]"
 						: (capsLockActive ? " [caps lock active]" : "");
-	char *level4LockInfo = level4LockActive ? " [level4 lock active]" : "";
+	char *level4LockInfo = modKeyStates.mod4.isLocked ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
 	printf(
 		"%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
@@ -711,9 +701,6 @@ unsigned getLevel() {
 	return level;
 }
 
-/**
- * returns `true` if no systemKey was pressed -> continue execution, `false` otherwise
- **/
 boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	bool newStateValue = !isKeyUp;
 	DWORD dwFlags = isKeyUp ? KEYEVENTF_KEYUP : 0;
@@ -721,50 +708,55 @@ boolean handleSystemKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	// Check also the scan code because AltGr sends VK_LCONTROL with scanCode 541
 	if (keyInfo.vkCode == VK_LCONTROL && keyInfo.scanCode == 29) {
 		ctrlLeftPressed = newStateValue;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
-		return false;
+		sendKey(keyInfo);
+		return true;
 
 	} else if (keyInfo.vkCode == VK_RCONTROL) {
 		ctrlRightPressed = newStateValue;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
-		return false;
+		sendKey(keyInfo);
+		return true;
 
 	} else if (keyInfo.vkCode == VK_LMENU) {
 		altLeftPressed = newStateValue;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
-		return false;
+		sendKey(keyInfo);
+		return true;
 
 	} else if (keyInfo.vkCode == VK_LWIN) {
 		winLeftPressed = newStateValue;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
-		return false;
+		sendKey(keyInfo);
+		return true;
 
 	} else if (keyInfo.vkCode == VK_RWIN) {
 		winRightPressed = newStateValue;
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlags, keyInfo.dwExtraInfo);
-		return false;
+		sendKey(keyInfo);
+		return true;
 	}
 
-	return true;
+	return false;
 }
 
 void toggleModLockConditionally(bool *isLocked, bool isKeyUp, bool ignoreLocking) {
-	if (!isKeyUp && !ignoreLocking) {
-		*isLocked = !(*isLocked);
-	}
+	if (!isKeyUp && !ignoreLocking) *isLocked = !(*isLocked);
 }
 
 // also toggle CapsLock (for keyboard LED)
 void toggleModLockConditionallyShift(bool *isLocked, bool isKeyUp, bool ignoreLocking) {
 	if (!isKeyUp && !ignoreLocking) {
 		// TODO: fix NumberRow characters during lock
+		// TODO: fix - shiftLock doesn't work with this approach (but did in the published version)
 
 		// NOTE: when sending CapsLock like this, we mustn't use the internal isLocked state
 		// because these 2 interfere with each other
 		// the probably cleaner solution is to use only the internal state and ignore the CapsLock LED
+		// or maybe when toggling bypassMode, reset lock state
 
 		sendDownUp(VK_CAPITAL, 58, false);
-		toggleCapsLock();
+
+		if (capsLockEnabled) {
+			toggleCapsLock();
+		} else {
+			toggleShiftLock();
+		}
 	}
 }
 
@@ -790,47 +782,56 @@ bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, ModKeyConfig mod, NeoMo
 	return false;
 }
 
-/**
- * updates system key and layerLock states; writes key
- * returns `true` if next hook should be called, `false` otherwise
- **/
+// updates system key and layerLock states; writes key
 bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 {
-	bool continueExecution = handleSystemKey(keyInfo, isKeyUp);
-	if (!continueExecution) return false;
-
 	unsigned level = getLevel();
 
 	if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3, false, toggleModLockConditionally)) {
-		return false;
-	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4, false, toggleModLockConditionally)) {
-		return false;
-	} else if (keyInfo.flags == 1) {
 		return true;
+
+	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4, false, toggleModLockConditionally)) {
+		return true;
+
+	} else if (handleSystemKey(keyInfo, isKeyUp)) {
+		return true;
+
+	} else if (keyInfo.flags == 1) {
+		// do nothing else if it has only the isExtendedKey bit set (why?)
+		return false;
+
 	} else if (level == 2 && handleLayer2SpecialCases(keyInfo)) {
-		return false;
+		return true;
+
 	} else if (level == 3 && handleLayer3SpecialCases(keyInfo)) {
-		return false;
+		return true;
+
 	} else if (level == 4 && handleLayer4SpecialCases(keyInfo)) {
-		return false;
+		return true;
 	} else if (keyInfo.vkCode >= 0x60 && keyInfo.vkCode <= 0x6F) {
 		// Numeric keypad -> don't remap
+		return true;
+
 	} else if (level == 1 && keyInfo.vkCode >= 0x30 && keyInfo.vkCode <= 0x39) {
 		// numbers 0 to 9 -> don't remap
+		return true;
+
 	} else if (!(qwertzForShortcuts && isSystemKeyPressed())) {
 		TCHAR key = mapScanCodeToChar(level, keyInfo.scanCode);
 		if (capsLockActive && (level == 1 || level == 2) && isLetter(key)) {
 			key = mapScanCodeToChar(level==1 ? 2 : 1, keyInfo.scanCode);
-		} if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
+		}
+
+		if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 			// if key must be mapped
 			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
 			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", "mapped", keyInfo.scanCode, character, key, key, level);
 			sendChar(key, keyInfo);
-			return false;
+			return true;
 		}
 	}
 
-	return true;
+	return false;
 }
 
 bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
@@ -856,7 +857,7 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 				toggleCapsLock();
 			}
 		}
-		keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
+		sendKey(keyInfo);
 		return true;
 	}
 
@@ -865,23 +866,14 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 
 	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
 		logKeyEvent("key up", keyInfo);
-
-		bool callNext = updateStatesAndWriteKey(keyInfo, true);
-		if (!callNext) return true;
+		if (updateStatesAndWriteKey(keyInfo, true)) return true;
 	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
 		logKeyEvent("key down", keyInfo);
-
-		level3modLeftAndNoOtherKeyPressed = false;
-		level3modRightAndNoOtherKeyPressed = false;
-		level4modLeftAndNoOtherKeyPressed = false;
-		level4modRightAndNoOtherKeyPressed = false;
-
-		bool callNext = updateStatesAndWriteKey(keyInfo, false);
-		if (!callNext) return true;
+		if (updateStatesAndWriteKey(keyInfo, false)) return true;
 	}
 
 	// send the incoming key if nothing matches
-	keybd_event(keyInfo.vkCode, keyInfo.scanCode, dwFlagsFromKeyInfo(keyInfo), keyInfo.dwExtraInfo);
+	sendKey(keyInfo);
 	return true;
 }
 
@@ -1028,7 +1020,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	KBDLLHOOKSTRUCT keyInfo = *((KBDLLHOOKSTRUCT *) lparam);
 
 	if (keyInfo.flags & LLKHF_INJECTED) {
-		// process injected events like normal, because most probably we are injecting them
+		// ignore injected events because they most probably come from us
 		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
@@ -1036,19 +1028,16 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	printf("\n");
 	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "input up" : "input down", keyInfo);
 
-
 	// remap keys and handle tapping
 	if (!bypassMode && dualFunctionKeys(&keyInfo)) return -1;
 
 	// update lastKey and currentKey
-	if (keyInfo.scanCode != 541) { // ignore LCONTROL that is sent when pressing ALTGR
-		lastKey.key.vk = currentKey.key.vk;
-		lastKey.key.scan = currentKey.key.scan;
-		lastKey.time = currentKey.time;
-		currentKey.key.vk = keyInfo.vkCode;
-		currentKey.key.scan = keyInfo.scanCode;
-		currentKey.time = time(NULL);
-	}
+	lastKey.key.vk = currentKey.key.vk;
+	lastKey.key.scan = currentKey.key.scan;
+	lastKey.time = currentKey.time;
+	currentKey.key.vk = keyInfo.vkCode;
+	currentKey.key.scan = keyInfo.scanCode;
+	currentKey.time = time(NULL);
 
 	if (write_event(keyInfo)) return -1;
 
