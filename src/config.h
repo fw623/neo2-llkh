@@ -23,6 +23,8 @@ typedef enum DfkState {
     RELEASED,
     PRESSED,
     TAPPED,
+    DOUBLETAPPED_FIRST_TIME,
+    DOUBLETAPPED_SECOND_TIME,
     DOUBLETAPPED,
     CONSUMED,
 } DfkState;
