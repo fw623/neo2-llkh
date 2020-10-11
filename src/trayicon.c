@@ -35,8 +35,7 @@ unsigned item_count = 1;
 
 LRESULT CALLBACK trayicon_messageloop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-bool trayicon_init(HICON icon, char tooltip[])
-{
+bool trayicon_init(HICON icon, char tooltip[]) {
 	HWND hidden_window;
 	WNDCLASSEX wc = { 0 };
 	TCHAR class_name[256];
@@ -56,10 +55,10 @@ bool trayicon_init(HICON icon, char tooltip[])
 		LOG_ERROR("Error registering window class.");
 		return false;
 	}
-	hidden_window =
-	    CreateWindowEx(0, class_name, class_name,
-			   0, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, HWND_MESSAGE, NULL,
-			   GetModuleHandle(NULL), NULL);
+	hidden_window = CreateWindowEx(
+		0, class_name, class_name, 0, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100,
+		HWND_MESSAGE, NULL, GetModuleHandle(NULL), NULL
+	);
 
 	if (!hidden_window) {
 		LOG_ERROR("Error creating hidden window.");
@@ -83,21 +82,17 @@ bool trayicon_init(HICON icon, char tooltip[])
 	functionptr_array[0] = NULL;
 }
 
-bool trayicon_change_icon(HICON newicon)
-{
-
+bool trayicon_change_icon(HICON newicon) {
 	trayicon_data.hIcon = newicon;
 	Shell_NotifyIcon(NIM_MODIFY, &trayicon_data);
 }
 
-void trayicon_remove()
-{
+void trayicon_remove() {
 	Shell_NotifyIcon(NIM_DELETE, &trayicon_data);
 	free(functionptr_array);
 }
 
-void trayicon_add_item(char *text, callback_functionPtr functionPtr)
-{
+void trayicon_add_item(char *text, callback_functionPtr functionPtr) {
 	if (!text) {
 		functionptr_array[0] = functionPtr;
 	} else {
@@ -110,8 +105,7 @@ void trayicon_add_item(char *text, callback_functionPtr functionPtr)
 
 }
 
-LRESULT CALLBACK trayicon_messageloop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
+LRESULT CALLBACK trayicon_messageloop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 	case WM_CREATE:
 		{
@@ -123,15 +117,14 @@ LRESULT CALLBACK trayicon_messageloop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 			case WM_LBUTTONUP:
 				{
 					if (functionptr_array[0])
-						(*functionptr_array[0]) ();
+						(*functionptr_array[0])();
 					break;
 				}
 			case WM_RBUTTONUP:
 				{
 					POINT cursor_position;
 					GetCursorPos(&cursor_position);
-					TrackPopupMenu(popup_menu, 0, cursor_position.x,
-						       cursor_position.y, 0, hWnd, 0);
+					TrackPopupMenu(popup_menu, 0, cursor_position.x, cursor_position.y, 0, hWnd, 0);
 					break;
 
 				}
@@ -142,7 +135,7 @@ LRESULT CALLBACK trayicon_messageloop(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 		{
 			//find out if a menu item was clicked
 			if (lParam >= ID_LAST && lParam < ID_LAST + item_count)
-				(*functionptr_array[lParam - ID_LAST + 1]) ();
+				(*functionptr_array[lParam - ID_LAST + 1])();
 			break;
 		}
 	}

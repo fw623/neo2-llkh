@@ -87,8 +87,7 @@ TCHAR mappingTableLevel5[LEN];
 TCHAR mappingTableLevel6[LEN];
 CHAR mappingTableLevel4Special[LEN];
 
-void SetStdOutToNewConsole()
-{
+void SetStdOutToNewConsole() {
 	// allocate a console for this app
 	AllocConsole();
 	// redirect unbuffered STDOUT to the console
@@ -109,8 +108,7 @@ void SetStdOutToNewConsole()
 	}
 }
 
-BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
-{
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
 	switch (fdwCtrlType) {
 		// Handle the Ctrl-c signal.
 		case CTRL_C_EVENT:
@@ -123,8 +121,7 @@ BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 	}
 }
 
-void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars)
-{
+void mapLevels_2_5_6(TCHAR * mappingTableOutput, TCHAR * newChars) {
 	TCHAR * l1_lowercase = L"abcdefghijklmnopqrstuvwxyzäöüß.,";
 
 	TCHAR *ptr;
@@ -184,8 +181,7 @@ void initLevel4SpecialCases() {
 		mappingTableLevel4Special[57] = '0';
 }
 
-void initLayout()
-{
+void initLayout() {
 	// initialize the mapping tables
 	for (int i = 0; i < LEN; i++) {
 		mappingTableLevel1[i] = 0;
@@ -315,8 +311,7 @@ void initLayout()
 	initLevel4SpecialCases();
 }
 
-void toggleBypassMode()
-{
+void toggleBypassMode() {
 	bypassMode = !bypassMode;
 
 	HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -342,8 +337,7 @@ KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
-TCHAR mapScanCodeToChar(unsigned level, char in)
-{
+TCHAR mapScanCodeToChar(unsigned level, char in) {
 	switch (level) {
 		case 2:
 			return mappingTableLevel2[in];
@@ -388,8 +382,7 @@ void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	sendUp(vkCode, scanCode, isExtendedKey);
 }
 
-void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
-{
+void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo) {
 	INPUT Input = {
 		.type = INPUT_KEYBOARD,
 		.ki = {
@@ -404,8 +397,7 @@ void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
  * Sends a char using emulated keyboard input
  * This works for most cases, but not for dead keys etc
  **/
-void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
-{
+void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo) {
 	SHORT keyScanResult = VkKeyScanEx(key, GetKeyboardLayout(0));
 
 	if (keyScanResult == -1 || shiftLockActive || capsLockActive || modKeyStates.mod4.isLocked
@@ -451,8 +443,7 @@ void sendChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
  * Send a usually dead key by injecting space after (on down).
  * This will add an actual space if actual dead key is followed by "dead" key with this
  **/
-void commitDeadKey(KBDLLHOOKSTRUCT keyInfo)
-{
+void commitDeadKey(KBDLLHOOKSTRUCT keyInfo) {
 	if (!(keyInfo.flags & LLKHF_UP)) sendDownUp(VK_SPACE, 57, false);
 }
 
@@ -460,8 +451,7 @@ bool isInputKey(KBDLLHOOKSTRUCT actual, InputKey desired) {
 	return actual.vkCode == desired.vk && actual.scanCode == desired.scan;
 }
 
-bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	switch(keyInfo.scanCode) {
 		case 27:
 			sendChar(L'̃', keyInfo);  // perispomene (Tilde)
@@ -474,8 +464,7 @@ bool handleLayer2SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
-bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'̊', keyInfo);  // overring
@@ -523,8 +512,7 @@ bool handleLayer3SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	}
 }
 
-bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
-{
+bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo) {
 	switch(keyInfo.scanCode) {
 		case 13:
 			sendChar(L'¨', keyInfo);  // diaeresis, umlaut
@@ -590,15 +578,13 @@ bool handleLayer4SpecialCases(KBDLLHOOKSTRUCT keyInfo)
 	return false;
 }
 
-bool isSystemKeyPressed()
-{
+bool isSystemKeyPressed() {
 	return ctrlLeftPressed || ctrlRightPressed
 	    || altLeftPressed
 	    || winLeftPressed || winRightPressed;
 }
 
-bool isLetter(TCHAR key)
-{
+bool isLetter(TCHAR key) {
 	return (key >= 65 && key <= 90  // A-Z
 	     || key >= 97 && key <= 122 // a-z
 	     || key == L'ä' || key == L'ö'
@@ -607,20 +593,17 @@ bool isLetter(TCHAR key)
 	     || key == L'Ü' || key == L'ẞ');
 }
 
-void toggleShiftLock()
-{
+void toggleShiftLock() {
 	shiftLockActive = !shiftLockActive;
 	printf("Shift lock %s!\n", shiftLockActive ? "activated" : "deactivated");
 }
 
-void toggleCapsLock()
-{
+void toggleCapsLock() {
 	capsLockActive = !capsLockActive;
 	printf("Caps lock %s!\n", capsLockActive ? "activated" : "deactivated");
 }
 
-void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
-{
+void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo) {
 	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
 	char *keyName = "";
 
@@ -770,8 +753,7 @@ bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, ModTypeConfig mod, NeoM
 }
 
 // updates system key and layerLock states; writes key
-bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
-{
+bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp) {
 	unsigned level = getLevel();
 
 	if (handleModKey(keyInfo, isKeyUp, modConfig.mod3, &modKeyStates.mod3, false, toggleModLockConditionally)) {
@@ -984,8 +966,7 @@ bool dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
 }
 
 __declspec(dllexport)
-LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
-{
+LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	LastKey currentKey;
 
 	if (
@@ -1028,8 +1009,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam)
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }
 
-DWORD WINAPI hookThreadMain(void *user)
-{
+DWORD WINAPI hookThreadMain(void *user) {
 	HINSTANCE base = GetModuleHandle(NULL);
 	MSG msg;
 
@@ -1066,22 +1046,19 @@ DWORD WINAPI hookThreadMain(void *user)
 	return 0;
 }
 
-void exitApplication()
-{
+void exitApplication() {
 	trayicon_remove();
 	PostQuitMessage(0);
 }
 
-bool fileExists(LPCSTR szPath)
-{
+bool fileExists(LPCSTR szPath) {
 	DWORD dwAttrib = GetFileAttributesA(szPath);
 
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES
 	    && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	/**
 	* find settings.ini (in same folder as neo-llkh.exe)
 	*/
