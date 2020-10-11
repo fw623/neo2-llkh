@@ -14,13 +14,13 @@ KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
 void tap(Mapping *m, DWORD flags) {
 	Tap *t;
 	for (t = m->tap; t; t = t->n) {
-		printf("remapped tap\n");
+		// printf("remapped tap\n");
 		writeEvent(newKeyInfo(t->code, flags));
 	}
 }
 
 void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	printf("down state1: %d\n", m->state);
+	// printf("down state1: %d\n", m->state);
 	// state
 	switch (m->state) {
 		case RELEASED:
@@ -37,14 +37,14 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			break;
 	}
 	m->changed = input->time;
-	printf("down state2: %d\n", m->state);
+	// printf("down state2: %d\n", m->state);
 
 	// action
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
 		case CONSUMED:
-			printf("remapped down\n");
+			// printf("remapped down\n");
 			writeEvent(newKeyInfo(m->hold, input->flags));
 			break;
 		case TAPPED:
@@ -55,7 +55,7 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 }
 
 void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	printf("up   state1: %d\n", m->state);
+	// printf("up   state1: %d\n", m->state);
 	// state
 	switch (m->state) {
 		case RELEASED:
@@ -72,18 +72,18 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			break;
 	}
 	m->changed = input->time;
-	printf("up   state2: %d\n", m->state);
+	// printf("up   state2: %d\n", m->state);
 
 	// action
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
 		case CONSUMED:
-			printf("remapped up\n");
+			// printf("remapped up\n");
 			writeEvent(newKeyInfo(m->hold, input->flags));
 			break;
 		case TAPPED:
-			printf("remapped release\n");
+			// printf("remapped release\n");
 			// release "hold"
 			writeEvent(newKeyInfo(m->hold, input->flags));
 			// synthesize tap

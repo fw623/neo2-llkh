@@ -339,9 +339,11 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo) {
 						: (capsLockActive ? " [caps lock active]" : "");
 	char *level4LockInfo = modStates.mod4.isLocked ? " [level4 lock active]" : "";
 	char *vkPacket = (desc=="injected" && keyInfo.vkCode == VK_PACKET) ? " (VK_PACKET)" : "";
+	char *upDown = keyInfo.flags & LLKHF_UP ? "up" : "down";
+
 	printf(
-		"%-13s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
-		desc, keyInfo.scanCode, keyInfo.vkCode, keyInfo.flags, keyInfo.dwExtraInfo,
+		"%-4s %-9s | sc:%03u vk:0x%02X flags:0x%02X extra:%d %s%s%s%s\n",
+		upDown, desc, keyInfo.scanCode, keyInfo.vkCode, keyInfo.flags, keyInfo.dwExtraInfo,
 		keyName, shiftLockCapsLockInfo, level4LockInfo, vkPacket
 	);
 }
@@ -466,7 +468,7 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo) {
 		if (key != 0 && (keyInfo.flags & LLKHF_INJECTED) == 0) {
 			// if key must be mapped
 			int character = MapVirtualKeyA(keyInfo.vkCode, MAPVK_VK_TO_CHAR);
-			printf("%-13s | sc:%03d %c->%c [0x%04X] (level %u)\n", "mapped", keyInfo.scanCode, character, key, key, level);
+			printf("     %-9s | sc:%03d %c->%c [0x%04X] (level %u)\n", "mapped", keyInfo.scanCode, character, key, key, level);
 			sendChar(key, keyInfo);
 			return true;
 		}
@@ -517,13 +519,8 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo) {
 	// skip LCONTROL sent by pressing ALTGR
 	if (keyInfo.scanCode == 541) return true;
 
-	if (wparam == WM_SYSKEYUP || wparam == WM_KEYUP) {
-		logKeyEvent("key up", keyInfo);
-		if (updateStatesAndWriteKey(keyInfo)) return true;
-	} else if (wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN) {
-		logKeyEvent("key down", keyInfo);
-		if (updateStatesAndWriteKey(keyInfo)) return true;
-	}
+	logKeyEvent("key", keyInfo);
+	if (updateStatesAndWriteKey(keyInfo)) return true;
 
 	// send the incoming key if nothing matches
 	sendKey(keyInfo);
@@ -551,12 +548,12 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 
 	if (keyInfo.flags & LLKHF_INJECTED) {
 		// ignore injected events because they most probably come from us
-		logKeyEvent((keyInfo.flags & LLKHF_UP) ? "injected up" : "injected down", keyInfo);
+		logKeyEvent("injected", keyInfo);
 		return CallNextHookEx(NULL, code, wparam, lparam);
 	}
 
 	printf("\n");
-	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "input up" : "input down", keyInfo);
+	logKeyEvent("input", keyInfo);
 
 	// remap keys and handle tapping
 	if (!bypassMode && dual_function_keys(&keyInfo)) return -1;
