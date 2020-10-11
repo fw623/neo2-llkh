@@ -23,17 +23,6 @@
 #define SCANCODE_RETURN_KEY 28
 #define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
 
-KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
-	KBDLLHOOKSTRUCT keyInfo = {
-		.vkCode = send.vk,
-		.scanCode = send.scan,
-		.flags = (send.isExtended ? LLKHF_EXTENDED : 0) | (flags & ~LLKHF_EXTENDED), // ignore extended flag of incoming key
-		.time = 0,
-		.dwExtraInfo = 0
-	};
-	return keyInfo;
-}
-
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
@@ -498,7 +487,7 @@ void toggleBypassMode() {
 	printf("%i bypass mode \n", bypassMode);
 }
 
-bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
+bool writeEvent(const KBDLLHOOKSTRUCT keyInfo) {
 	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
 
 	// handle shift here; necessary because we need to track it also in bypassMode
@@ -541,128 +530,6 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	return true;
 }
 
-void tap(Mapping *m, DWORD flags) {
-	Tap *t;
-	for (t = m->tap; t; t = t->n) {
-		printf("remapped tap\n");
-		write_event(newKeyInfo(t->code, flags));
-	}
-}
-
-void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	printf("down state1: %d\n", m->state);
-	// state
-	switch (m->state) {
-		case RELEASED:
-			m->state = PRESSED;
-			break;
-		case PRESSED:
-		case DOUBLETAPPED:
-		case CONSUMED:
-			break;
-		case TAPPED:
-			m->state = input->time - m->changed < dfkConfig.double_tap_millis
-				? DOUBLETAPPED
-				: PRESSED;
-			break;
-	}
-	m->changed = input->time;
-	printf("down state2: %d\n", m->state);
-
-	// action
-	switch (m->state) {
-		case RELEASED:
-		case PRESSED:
-		case CONSUMED:
-			printf("remapped down\n");
-			write_event(newKeyInfo(m->hold, input->flags));
-			break;
-		case TAPPED:
-		case DOUBLETAPPED:
-			tap(m, 0);
-			break;
-	}
-}
-
-void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
-	printf("up   state1: %d\n", m->state);
-	// state
-	switch (m->state) {
-		case RELEASED:
-		case TAPPED:
-			break;
-		case PRESSED:
-			m->state = input->time - m->changed < dfkConfig.tap_millis
-				? TAPPED
-				: RELEASED;
-			break;
-		case DOUBLETAPPED:
-		case CONSUMED:
-			m->state = RELEASED;
-			break;
-	}
-	m->changed = input->time;
-	printf("up   state2: %d\n", m->state);
-
-	// action
-	switch (m->state) {
-		case RELEASED:
-		case PRESSED:
-		case CONSUMED:
-			printf("remapped up\n");
-			write_event(newKeyInfo(m->hold, input->flags));
-			break;
-		case TAPPED:
-			printf("remapped release\n");
-			// release "hold"
-			write_event(newKeyInfo(m->hold, input->flags));
-			// synthesize tap
-			tap(m, 0);
-			tap(m, LLKHF_UP);
-			break;
-		case DOUBLETAPPED:
-			tap(m, LLKHF_UP);
-			break;
-	}
-}
-
-void consume_pressed() {
-	// state
-	for (Mapping *m = dfkConfig.m; m; m = m->n) {
-		switch (m->state) {
-			case PRESSED:
-				m->state = CONSUMED;
-				break;
-			case TAPPED:
-			case DOUBLETAPPED:
-			case RELEASED:
-			case CONSUMED:
-				break;
-		}
-	}
-}
-
-bool dualFunctionKeys(KBDLLHOOKSTRUCT *input) {
-	Mapping *m;
-
-	// consume all taps that are incomplete
-	if (!(input->flags & LLKHF_UP)) consume_pressed();
-
-	// is this our key?
-	for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
-
-	// forward all other key events
-	if (!m) return false;
-
-	if (input->flags & LLKHF_UP) {
-		handle_release(m, input);
-	} else {
-		handle_press(m, input);
-	}
-
-	return true;
-}
-
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	LastKey currentKey;
@@ -692,7 +559,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	logKeyEvent((keyInfo.flags & LLKHF_UP) ? "input up" : "input down", keyInfo);
 
 	// remap keys and handle tapping
-	if (!bypassMode && dualFunctionKeys(&keyInfo)) return -1;
+	if (!bypassMode && dual_function_keys(&keyInfo)) return -1;
 
 	// update lastKey and currentKey
 	lastKey.key.vk = currentKey.key.vk;
@@ -702,7 +569,7 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	currentKey.key.scan = keyInfo.scanCode;
 	currentKey.time = 0;
 
-	if (write_event(keyInfo)) return -1;
+	if (writeEvent(keyInfo)) return -1;
 
 	return CallNextHookEx(NULL, code, wparam, lparam);
 }

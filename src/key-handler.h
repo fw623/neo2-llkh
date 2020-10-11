@@ -8,9 +8,14 @@
 #include "config.h"
 #include "states.h"
 #include "tray-icon.h"
+#include "dfk.h"
 
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam);
 
 void toggleBypassMode();
+
+bool isInputKey(KBDLLHOOKSTRUCT actual, InputKey desired);
+
+bool writeEvent(const KBDLLHOOKSTRUCT keyInfo);
 
 #endif /* KEY_HANDLER_H_ */
