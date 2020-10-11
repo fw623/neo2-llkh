@@ -11,11 +11,11 @@ typedef struct InputKey {
 	int scan;
 } InputKey;
 
-typedef struct SendKey {
+typedef struct OutputKey {
 	int vk;
 	int scan;
 	bool isExtended;
-} SendKey;
+} OutputKey;
 
 typedef enum DfkState {
     RELEASED,
@@ -26,13 +26,13 @@ typedef enum DfkState {
 } DfkState;
 
 typedef struct Tap {
-    SendKey code;
+    OutputKey code;
     struct Tap *n;
 } Tap;
 
 typedef struct Mapping {
     InputKey key;
-    SendKey hold;
+    OutputKey hold;
     Tap *tap;
     DfkState state;
     DWORD changed;
@@ -46,14 +46,14 @@ typedef struct DfkConfig {
 } DfkConfig;
 
 // type to define neo modifier keys (i.e. mod3, mod4) and shift
-typedef struct ModKeyConfig {
+typedef struct ModTypeConfig {
 	InputKey *lock, left, right;
 	bool bothLock; // should left + right at same time activate lock?
-} ModKeyConfig;
+} ModTypeConfig;
 
-typedef struct ModKeyConfigs {
-	ModKeyConfig shift, mod3, mod4;
-} ModKeyConfigs;
+typedef struct ModConfig {
+	ModTypeConfig shift, mod3, mod4;
+} ModConfig;
 
 /* ============ VALUES ============ */
 
@@ -126,7 +126,7 @@ static DfkConfig dfkConfig = {
 	.m = &dfkCaps
 };
 
-static ModKeyConfigs modKeyConfigs = {
+static ModConfig modConfig = {
 	.shift = {
 		.lock = NULL,
 		.left = { VK_LSHIFT, 42 },

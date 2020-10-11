@@ -328,7 +328,7 @@ void toggleBypassMode()
 	printf("%i bypass mode \n", bypassMode);
 }
 
-KBDLLHOOKSTRUCT newKeyInfo (SendKey send, DWORD flags) {
+KBDLLHOOKSTRUCT newKeyInfo (OutputKey send, DWORD flags) {
 	KBDLLHOOKSTRUCT keyInfo = {
 		.vkCode = send.vk,
 		.scanCode = send.scan,
@@ -379,26 +379,13 @@ void sendDown(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0), 0);
 }
 
-void sendDown2(SendKey key) {
-	keybd_event(key.vk, key.scan, (key.isExtended ? KEYEVENTF_EXTENDEDKEY : 0), 0);
-}
-
 void sendUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	keybd_event(vkCode, scanCode, (isExtendedKey ? KEYEVENTF_EXTENDEDKEY : 0) | KEYEVENTF_KEYUP, 0);
-}
-
-void sendUp2(SendKey key) {
-	keybd_event(key.vk, key.scan, (key.isExtended ? KEYEVENTF_EXTENDEDKEY : 0) | KEYEVENTF_KEYUP, 0);
 }
 
 void sendDownUp(BYTE vkCode, BYTE scanCode, bool isExtendedKey) {
 	sendDown(vkCode, scanCode, isExtendedKey);
 	sendUp(vkCode, scanCode, isExtendedKey);
-}
-
-void sendDownUp2(SendKey key) {
-	sendDown2(key);
-	sendUp2(key);
 }
 
 void sendUnicodeChar(TCHAR key, KBDLLHOOKSTRUCT keyInfo)
@@ -637,17 +624,17 @@ void logKeyEvent(char *desc, KBDLLHOOKSTRUCT keyInfo)
 	char vkCodeLetter[4] = {'(', keyInfo.vkCode, ')', 0};
 	char *keyName = "";
 
-	if (keyInfo.vkCode == modKeyConfigs.shift.left.vk) {
+	if (keyInfo.vkCode == modConfig.shift.left.vk) {
 		keyName = "(Shift left)";
-	} else if (keyInfo.vkCode == modKeyConfigs.shift.right.vk) {
+	} else if (keyInfo.vkCode == modConfig.shift.right.vk) {
 		keyName = "(Shift right)";
-	} else if (keyInfo.vkCode == modKeyConfigs.mod3.left.vk) {
+	} else if (keyInfo.vkCode == modConfig.mod3.left.vk) {
 		keyName = "(M3 left)";
-	} else if (keyInfo.vkCode == modKeyConfigs.mod3.right.vk) {
+	} else if (keyInfo.vkCode == modConfig.mod3.right.vk) {
 		keyName = "(M3 right)";
-	} else if (keyInfo.vkCode == modKeyConfigs.mod4.left.vk) {
+	} else if (keyInfo.vkCode == modConfig.mod4.left.vk) {
 		keyName = "(M4 left)";
-	} else if (keyInfo.vkCode == modKeyConfigs.mod4.right.vk) {
+	} else if (keyInfo.vkCode == modConfig.mod4.right.vk) {
 		keyName = "(M4 right)";
 	} else if (keyInfo.vkCode == VK_SHIFT) {
 		keyName = "(Shift)";
@@ -761,7 +748,7 @@ void toggleModLockConditionallyShift(bool *isLocked, bool isKeyUp, bool ignoreLo
 }
 
 // ignoreLocking - is used for shift key during bypassMode
-bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, ModKeyConfig mod, NeoModState *state, bool ignoreLocking, void (*toggleLockConditionally)(bool *, bool, bool)) {
+bool handleModKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp, ModTypeConfig mod, NeoModState *state, bool ignoreLocking, void (*toggleLockConditionally)(bool *, bool, bool)) {
 	if (mod.lock && isInputKey(keyInfo, *mod.lock)) {
 		toggleLockConditionally(&state->isLocked, isKeyUp, ignoreLocking);
 		return true;
@@ -787,10 +774,10 @@ bool updateStatesAndWriteKey(KBDLLHOOKSTRUCT keyInfo, bool isKeyUp)
 {
 	unsigned level = getLevel();
 
-	if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod3, &modKeyStates.mod3, false, toggleModLockConditionally)) {
+	if (handleModKey(keyInfo, isKeyUp, modConfig.mod3, &modKeyStates.mod3, false, toggleModLockConditionally)) {
 		return true;
 
-	} else if (handleModKey(keyInfo, isKeyUp, modKeyConfigs.mod4, &modKeyStates.mod4, false, toggleModLockConditionally)) {
+	} else if (handleModKey(keyInfo, isKeyUp, modConfig.mod4, &modKeyStates.mod4, false, toggleModLockConditionally)) {
 		return true;
 
 	} else if (handleSystemKey(keyInfo, isKeyUp)) {
@@ -835,7 +822,7 @@ bool write_event(const KBDLLHOOKSTRUCT keyInfo) {
 	WPARAM wparam = (keyInfo.flags & LLKHF_UP) ? WM_KEYUP : WM_KEYDOWN;
 
 	// handle shift here; necessary because we need to track it also in bypassMode
-	if (handleModKey(keyInfo, keyInfo.flags & LLKHF_UP, modKeyConfigs.shift, &modKeyStates.shift, bypassMode, toggleModLockConditionallyShift)) {
+	if (handleModKey(keyInfo, keyInfo.flags & LLKHF_UP, modConfig.shift, &modKeyStates.shift, bypassMode, toggleModLockConditionallyShift)) {
 		return false;
 	}
 
