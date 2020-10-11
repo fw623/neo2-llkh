@@ -53,6 +53,9 @@ void tap(Mapping *m, DWORD flags) {
 }
 
 void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
+	levelOfLastPress = getLevel();
+	bool isFirstDouble = true;
+
 	// state
 	switch (m->state) {
 		case RELEASED:
@@ -61,15 +64,16 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 		case PRESSED:
 		case DOUBLETAPPED:
 		case CONSUMED:
+			isFirstDouble = false;
 			break;
 		case TAPPED:
+			isFirstDouble = true;
 			m->state = input->time - m->changed < dfkConfig.double_tap_millis
 				? DOUBLETAPPED
 				: PRESSED;
 			break;
 	}
 	m->changed = input->time;
-	levelOfLastPress = getLevel();
 
 	// action
 	switch (m->state) {
@@ -80,7 +84,11 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			break;
 		case TAPPED:
 		case DOUBLETAPPED:
-			tap(m, 0);
+			if (isFirstDouble) {
+				writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
+			} else {
+				tap(m, 0);
+			}
 			break;
 	}
 }
@@ -113,6 +121,7 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 		case TAPPED:
 			// release "hold"
 			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
+
 			// synthesize tap
 			tap(m, 0);
 			tap(m, LLKHF_UP);
