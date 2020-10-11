@@ -4,7 +4,7 @@ LD=$(TARGET)gcc
 WINDRES=$(TARGET)windres
 CFLAGS=-std=c99 -O3 -DWINVER=0x500 -DWIN32_WINNT=0x500
 LDFLAGS+=-mwindows
-OBJECTS=main.o init-layout.o key-handler.o trayicon.o resources.o
+OBJECTS=config.o init-layout.o key-handler.o main.o resources.o states.o trayicon.o
 ifdef DEBUG
 	CFLAGS+= -g
 	LDFLAGS:=$(filter-out -mwindows, $(LDFLAGS))
