@@ -146,7 +146,7 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 	}
 }
 
-void consume_pressed_and_other_first_doubletapped(Mapping *currentM) {
+void consume_pressed_and_release_other_first_doubletapped(Mapping *currentM) {
 	// state
 	for (Mapping *m = dfkConfig.m; m; m = m->n) {
 		switch (m->state) {
@@ -158,7 +158,7 @@ void consume_pressed_and_other_first_doubletapped(Mapping *currentM) {
 				break;
 			case DOUBLETAPPED_FIRST_TIME:
 				// consume first doubletap only of other mappings
-				if (m != currentM) m->state = CONSUMED;
+				if (m != currentM) m->state = RELEASED;
 				break;
 			case PRESSED:
 				m->state = CONSUMED;
@@ -173,9 +173,9 @@ bool dual_function_keys(KBDLLHOOKSTRUCT *input) {
 	// find mapping for input; NULL if not defined
 	for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
 
-	// consume all taps that are incomplete
+	// consume/release all taps that are incomplete
 	// (those which would synthesize a tap on release)
-	if (!(input->flags & LLKHF_UP)) consume_pressed_and_other_first_doubletapped(m);
+	if (!(input->flags & LLKHF_UP)) consume_pressed_and_release_other_first_doubletapped(m);
 
 	// forward all other key events
 	if (!m) return false;
