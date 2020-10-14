@@ -5,8 +5,6 @@
 #include <stdbool.h>
 
 #define LEN 103
-#define DEFAULT_TAP_MILLIS 150
-#define DEFAULT_DOUBLE_TAP_MILLIS 150
 
 typedef struct InputKey {
 	int vk;

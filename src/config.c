@@ -42,7 +42,7 @@ Mapping dfkAltGr = {
 	.n = &dfkAltL
 };
 
-Mapping dfkOe = {
+Mapping dfkAe = {
 	.key = { 0xDE, 40 },
 	.hold = { 0xBF, 43, false },
 	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
@@ -57,7 +57,7 @@ Mapping dfkLess = {
 	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
 	.state = RELEASED,
 	.changed = 0,
-	.n = &dfkOe
+	.n = &dfkAe
 };
 
 Mapping dfkCaps = {
@@ -70,8 +70,8 @@ Mapping dfkCaps = {
 };
 
 DfkConfig dfkConfig = {
-	.tap_millis = DEFAULT_TAP_MILLIS,
-	.double_tap_millis = DEFAULT_DOUBLE_TAP_MILLIS,
+	.tap_millis = 0, // set via settings.ini
+	.double_tap_millis = 0, // set via settings.ini
 	.m = &dfkCaps
 };
 

@@ -134,6 +134,12 @@ int main (int argc, char *argv[]) {
 		GetPrivateProfileStringA("Settings", "debugWindow", "0", returnValue, 100, ini);
 		debugWindow = (strcmp(returnValue, "1") == 0);
 
+		GetPrivateProfileStringA("Settings", "tapMillis", "200", returnValue, 100, ini);
+		dfkConfig.tap_millis = atoi(returnValue);
+
+		GetPrivateProfileStringA("Settings", "doubleTapMillis", "150", returnValue, 100, ini);
+		dfkConfig.double_tap_millis = atoi(returnValue);
+
 		if (capsLockEnabled)
 			shiftLockEnabled = false;
 
@@ -147,7 +153,9 @@ int main (int argc, char *argv[]) {
 		printf(" shiftLockEnabled: %d\n", shiftLockEnabled);
 		printf(" qwertzForShortcuts: %d\n", qwertzForShortcuts);
 		printf(" supportLevels5and6: %d\n", supportLevels5and6);
-		printf(" debugWindow: %d\n\n", debugWindow);
+		printf(" debugWindow: %d\n", debugWindow);
+		printf(" tapMillis: %d\n", dfkConfig.tap_millis);
+		printf(" doubleTapMillis: %d\n\n", dfkConfig.double_tap_millis);
 
 	} else {
 		printf("\nsettings.ini not found: %s\n\n", ini);
@@ -210,6 +218,14 @@ int main (int argc, char *argv[]) {
 				} else if (strcmp(param, "supportLevels5and6") == 0) {
 					supportLevels5and6 = value==NULL ? false : (strcmp(value, "1") == 0);
 					printf("\n supportLevels5and6: %d", supportLevels5and6);
+
+				} else if (strcmp(param, "tapMillis") == 0) {
+					dfkConfig.tap_millis = atoi(value);
+					printf("\n tapMillis: %d", dfkConfig.tap_millis);
+
+				} else if (strcmp(param, "doubleTapMillis") == 0) {
+					dfkConfig.double_tap_millis = atoi(value);
+					printf("\n doubleTapMillis: %d", dfkConfig.double_tap_millis);
 
 				} else {
 					printf("\nUnknown parameter: %s", param);
