@@ -71,19 +71,18 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 			m->state = PRESSED;
 			break;
 		case PRESSED:
-		case DOUBLETAPPED:
-		case CONSUMED:
+		case DOUBLETAPPED_HELD:
 			break;
 		case TAPPED:
 			m->state = input->time - m->changed < dfkConfig.double_tap_millis
-				? DOUBLETAPPED_FIRST_TIME
+				? DOUBLETAPPED
 				: PRESSED;
 			break;
-		case DOUBLETAPPED_FIRST_TIME:
-			m->state = DOUBLETAPPED_SECOND_TIME;
+		case DOUBLETAPPED_HELD_FIRST:
+			m->state = DOUBLETAPPED_HELD;
 			break;
-		case DOUBLETAPPED_SECOND_TIME:
-			m->state = DOUBLETAPPED;
+		case DOUBLETAPPED:
+			m->state = DOUBLETAPPED_HELD_FIRST;
 			break;
 	}
 	m->changed = input->time;
@@ -92,17 +91,14 @@ void handle_press(Mapping *m, KBDLLHOOKSTRUCT *input) {
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
-		case CONSUMED:
-			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
-			break;
 		case TAPPED:
-		case DOUBLETAPPED_FIRST_TIME:
+		case DOUBLETAPPED:
 			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
 			break;
-		case DOUBLETAPPED_SECOND_TIME:
+		case DOUBLETAPPED_HELD_FIRST:
 			first_tap(m, input, false);
 			break;
-		case DOUBLETAPPED:
+		case DOUBLETAPPED_HELD:
 			tap(m, 0, false);
 			break;
 	}
@@ -113,16 +109,17 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 	switch (m->state) {
 		case RELEASED:
 		case TAPPED:
-		case DOUBLETAPPED_FIRST_TIME:
 			break;
 		case PRESSED:
 			m->state = input->time - m->changed < dfkConfig.tap_millis
 				? TAPPED
 				: RELEASED;
 			break;
-		case DOUBLETAPPED_SECOND_TIME:
 		case DOUBLETAPPED:
-		case CONSUMED:
+			m->state = TAPPED;
+			break;
+		case DOUBLETAPPED_HELD_FIRST:
+		case DOUBLETAPPED_HELD:
 			m->state = RELEASED;
 			break;
 	}
@@ -132,36 +129,32 @@ void handle_release(Mapping *m, KBDLLHOOKSTRUCT *input) {
 	switch (m->state) {
 		case RELEASED:
 		case PRESSED:
-		case CONSUMED:
 			writeEvent(newKeyInfo(m->hold, input->flags), getLevel());
 			break;
 		case TAPPED:
-		case DOUBLETAPPED_FIRST_TIME:
 			first_tap(m, input, true);
 			break;
-		case DOUBLETAPPED_SECOND_TIME:
 		case DOUBLETAPPED:
-			tap(m, LLKHF_UP, true);
+		case DOUBLETAPPED_HELD_FIRST:
+		case DOUBLETAPPED_HELD:
 			break;
 	}
 }
 
-void consume_pressed_and_release_other_first_doubletapped(Mapping *currentM) {
+void release_pressed_and_other_doubletapped(Mapping *currentM) {
 	// state
 	for (Mapping *m = dfkConfig.m; m; m = m->n) {
 		switch (m->state) {
 			case RELEASED:
 			case TAPPED:
-			case DOUBLETAPPED_SECOND_TIME:
-			case DOUBLETAPPED:
-			case CONSUMED:
+			case DOUBLETAPPED_HELD_FIRST:
+			case DOUBLETAPPED_HELD:
 				break;
-			case DOUBLETAPPED_FIRST_TIME:
-				// consume first doubletap only of other mappings
+			case DOUBLETAPPED:
 				if (m != currentM) m->state = RELEASED;
 				break;
 			case PRESSED:
-				m->state = CONSUMED;
+				m->state = RELEASED;
 				break;
 		}
 	}
@@ -173,9 +166,8 @@ bool dual_function_keys(KBDLLHOOKSTRUCT *input) {
 	// find mapping for input; NULL if not defined
 	for (m = dfkConfig.m; m && !isInputKey(*input, m->key); m = m->n);
 
-	// consume/release all taps that are incomplete
-	// (those which would synthesize a tap on release)
-	if (!(input->flags & LLKHF_UP)) consume_pressed_and_release_other_first_doubletapped(m);
+	// release all taps that are incomplete
+	if (!(input->flags & LLKHF_UP)) release_pressed_and_other_doubletapped(m);
 
 	// forward all other key events
 	if (!m) return false;
