@@ -25,6 +25,7 @@ typedef enum DfkState {
     DOUBLETAPPED,
     DOUBLETAPPED_HELD_FIRST,
     DOUBLETAPPED_HELD,
+    CONSUMED,
 } DfkState;
 
 typedef struct Tap {

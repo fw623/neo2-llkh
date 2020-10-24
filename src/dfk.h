@@ -7,6 +7,6 @@
 #include "config.h"
 #include "key-handler.h"
 
-bool dual_function_keys(KBDLLHOOKSTRUCT *input);
+bool dual_function_keys(const KBDLLHOOKSTRUCT *input);
 
 #endif /* DFK_H_ */
