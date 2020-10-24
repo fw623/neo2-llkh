@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "scancode.h"
 #include "config.h"
 #include "key-handler.h"
 

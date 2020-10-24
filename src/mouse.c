@@ -54,19 +54,19 @@ void releaseRight(const NavigationMapping *key) {
   mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
 }
 
-NavigationMapping rightPress  = { 38,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
-NavigationMapping middlePress = { 37,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
-NavigationMapping leftPress   = { 36,  0,   0,   0, pressLeft, releaseLeft, NULL, &middlePress };
-NavigationMapping downScroll  = { 39, 33,   1,   1, scrollDown, NULL, NULL, &leftPress };
-NavigationMapping upScroll    = { 24, 33,   1,   1, scrollUp, NULL, NULL, &downScroll };
-NavigationMapping rightFast   = { 34, 33, 100, 100, moveRight, NULL, NULL, &upScroll };
-NavigationMapping downFast    = { 19, 33, 100, 100, moveDown, NULL, NULL, &rightFast };
-NavigationMapping leftFast    = { 30, 33, 100, 100, moveLeft, NULL, NULL, &downFast };
-NavigationMapping upFast      = { 17, 33, 100, 100, moveUp, NULL, NULL, &leftFast };
-NavigationMapping rightSlow   = { 33, 33,  25,   4, moveRight, NULL, NULL, &upFast };
-NavigationMapping downSlow    = { 32, 33,  25,   4, moveDown, NULL, NULL, &rightSlow };
-NavigationMapping leftSlow    = { 31, 33,  25,   4, moveLeft, NULL, NULL, &downSlow };
-NavigationMapping upSlow      = { 18, 33,  25,   4, moveUp, NULL, NULL, &leftSlow };
+NavigationMapping rightPress  = { SCAN_K,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
+NavigationMapping middlePress = { SCAN_L,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
+NavigationMapping leftPress   = { SCAN_J,  0,   0,   0, pressLeft, releaseLeft, NULL, &middlePress };
+NavigationMapping downScroll  = { SCAN_O, 33,   1,   1, scrollDown, NULL, NULL, &leftPress };
+NavigationMapping upScroll    = { SCAN_I, 33,   1,   1, scrollUp, NULL, NULL, &downScroll };
+NavigationMapping rightFast   = { SCAN_G, 33, 100, 100, moveRight, NULL, NULL, &upScroll };
+NavigationMapping downFast    = { SCAN_R, 33, 100, 100, moveDown, NULL, NULL, &rightFast };
+NavigationMapping leftFast    = { SCAN_A, 33, 100, 100, moveLeft, NULL, NULL, &downFast };
+NavigationMapping upFast      = { SCAN_W, 33, 100, 100, moveUp, NULL, NULL, &leftFast };
+NavigationMapping rightSlow   = { SCAN_F, 33,  25,   4, moveRight, NULL, NULL, &upFast };
+NavigationMapping downSlow    = { SCAN_D, 33,  25,   4, moveDown, NULL, NULL, &rightSlow };
+NavigationMapping leftSlow    = { SCAN_S, 33,  25,   4, moveLeft, NULL, NULL, &downSlow };
+NavigationMapping upSlow      = { SCAN_E, 33,  25,   4, moveUp, NULL, NULL, &leftSlow };
 
 NavigationMapping *mapping = &upSlow;
 
