@@ -33,6 +33,5 @@ extern ModStates modStates;
 extern bool shiftLockActive;
 extern bool capsLockActive;
 extern bool bypassMode; // true if no mapping should be done
-extern LastKey lastKey;
 
 #endif /* STATES_H_ */

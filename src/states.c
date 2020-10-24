@@ -15,4 +15,3 @@ ModStates modStates = {
 bool shiftLockActive = false;
 bool capsLockActive = false;
 bool bypassMode = false; // true if no mapping should be done
-LastKey lastKey;

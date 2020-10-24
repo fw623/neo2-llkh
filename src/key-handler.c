@@ -519,8 +519,6 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level) {
 
 __declspec(dllexport)
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
-	LastKey currentKey;
-
 	if (
 		code != HC_ACTION
 		|| !(wparam == WM_SYSKEYUP || wparam == WM_KEYUP || wparam == WM_SYSKEYDOWN || wparam == WM_KEYDOWN)
@@ -547,14 +545,6 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 
 	// remap keys and handle tapping
 	if (!bypassMode && dual_function_keys(&keyInfo)) return -1;
-
-	// update lastKey and currentKey
-	lastKey.key.vk = currentKey.key.vk;
-	lastKey.key.scan = currentKey.key.scan;
-	lastKey.time = currentKey.time;
-	currentKey.key.vk = keyInfo.vkCode;
-	currentKey.key.scan = keyInfo.scanCode;
-	currentKey.time = 0;
 
 	if (writeEvent(keyInfo, getLevel())) return -1;
 
