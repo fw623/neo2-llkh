@@ -9,6 +9,7 @@
 #include "states.h"
 #include "tray-icon.h"
 #include "dfk.h"
+#include "mouse.h"
 
 LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam);
 

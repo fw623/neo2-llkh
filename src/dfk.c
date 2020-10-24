@@ -1,7 +1,7 @@
 /*
  * Dual Function Keys - remapping and tapping of keys
  * heavily inspired by https://gitlab.com/interception/linux/plugins/dual-function-keys
- *
+ * license copied from there
  *
  * *The MIT License (MIT)*
  *

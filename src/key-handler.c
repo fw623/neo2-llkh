@@ -501,6 +501,14 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level) {
 	// skip LCONTROL sent by pressing ALTGR
 	if (keyInfo.scanCode == 541) return true;
 
+	// handle mouse navigation
+	if (modStates.mod3.rightIsPressed && modStates.mod4.rightIsPressed) {
+		if (navigateMouse(keyInfo)) return -1;
+	} else {
+		resetMouseNavigationState();
+	}
+
+
 	logKeyEvent("key", keyInfo);
 	if (updateStatesAndWriteKey(keyInfo, level)) return true;
 
@@ -547,65 +555,6 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	currentKey.key.vk = keyInfo.vkCode;
 	currentKey.key.scan = keyInfo.scanCode;
 	currentKey.time = 0;
-
-	if (getLevel() == 6) {
-
-		int slow = 25;
-		int medium = 250;
-		int fast = 1000;
-
-		switch (keyInfo.scanCode) {
-			case 18: // up
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, 0, -slow, 0, 0);
-				break;
-			case 31: // left
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, -slow, 0, 0, 0);
-				break;
-			case 32: // down
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, 0, slow, 0, 0);
-				break;
-			case 33: // right
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, slow, 0, 0, 0);
-				break;
-
-			case 17: // 8*up
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, 0, -medium, 0, 0);
-				break;
-			case 19: // 8*down
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, 0, medium, 0, 0);
-				break;
-			case 30: // home
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, -medium, 0, 0, 0);
-				break;
-			case 34: // end
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_MOVE, medium, 0, 0, 0);
-				break;
-
-			case 36: // j
-				mouse_event((keyInfo.flags & LLKHF_UP) ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-				break;
-			case 37: // k
-				mouse_event((keyInfo.flags & LLKHF_UP) ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-				break;
-			case 23: // i
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA, 0);
-				break;
-			case 24: // o
-				if (keyInfo.flags & LLKHF_UP) return -1;
-				mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA, 0);
-				break;
-		}
-		return -1;
-	}
 
 	if (writeEvent(keyInfo, getLevel())) return -1;
 
