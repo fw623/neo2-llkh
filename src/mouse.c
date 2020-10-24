@@ -1,96 +1,108 @@
 #include "mouse.h"
 
-void moveUp(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_MOVE, 0, -amount, 0, 0);
-}
-
-void moveLeft(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_MOVE, -amount, 0, 0, 0);
-}
-
-void moveDown(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_MOVE, 0, amount, 0, 0);
-}
-
-void moveRight(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_MOVE, amount, 0, 0, 0);
-}
-
-void pressLeft(bool isKeyUp, int amount) {
-  mouse_event(isKeyUp ? MOUSEEVENTF_LEFTUP : MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-}
-
-void pressRight(bool isKeyUp, int amount) {
-  mouse_event(isKeyUp ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-}
-
-void scrollUp(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA * amount, 0);
-}
-
-void scrollDown(bool isKeyUp, int amount) {
-  if (!isKeyUp)
-    mouse_event(MOUSEEVENTF_WHEEL, 0, 0, - WHEEL_DELTA * amount, 0);
-}
-
-
-typedef struct NavigationKey {
+typedef struct NavigationMapping {
   DWORD scan;
-  bool isPressed;
-  bool repeatPresses;
-  void (*sendEvent)(bool isKeyUp, int amount);
-  int amount;
-  struct NavigationKey *n;
-} NavigationKey;
+  int period; // 0 ... only run once
+  int value;
+  void (*timerEvent)(struct NavigationMapping *key); // gets attached to timer
+  void (*releaseEvent)(struct NavigationMapping *key); // gets called on key release
+  HANDLE timer;
+  struct NavigationMapping *n;
+} NavigationMapping;
 
-NavigationKey downScroll = { 24, false, true, scrollDown, 1, NULL };
-NavigationKey upScroll   = { 23, false, true, scrollUp, 1, &downScroll };
-NavigationKey rightPress = { 37, false, false, pressRight, 1, &upScroll };
-NavigationKey leftPress  = { 36, false, false, pressLeft, 1, &rightPress };
-NavigationKey rightFast  = { 34, false, true, moveRight, 250, &leftPress };
-NavigationKey downFast   = { 19, false, true, moveDown, 250, &rightFast };
-NavigationKey leftFast   = { 30, false, true, moveLeft, 250, &downFast };
-NavigationKey upFast     = { 17, false, true, moveUp, 250, &leftFast };
-NavigationKey rightSlow  = { 33, false, true, moveRight, 25, &upFast };
-NavigationKey downSlow   = { 32, false, true, moveDown, 25, &rightSlow };
-NavigationKey leftSlow   = { 31, false, true, moveLeft, 25, &downSlow };
-NavigationKey upSlow     = { 18, false, true, moveUp, 25, &leftSlow };
+void moveUp(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_MOVE, 0, -key->value, 0, 0);
+}
 
-NavigationKey *mapping = &upSlow;
+void moveLeft(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_MOVE, -key->value, 0, 0, 0);
+}
 
-void resetMouseNavigationState() {
-  for (NavigationKey *m = mapping; m != NULL; m = m->n) {
-    if (m->isPressed) {
-      m->isPressed = false;
-      m->sendEvent(true, m->amount);
+void moveDown(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_MOVE, 0, key->value, 0, 0);
+}
+
+void moveRight(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_MOVE, key->value, 0, 0, 0);
+}
+
+void scrollUp(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA * key->value, 0);
+}
+
+void scrollDown(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA * key->value, 0);
+}
+
+void pressLeft(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+}
+
+void releaseLeft(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+}
+
+void pressRight(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+}
+
+void releaseRight(NavigationMapping *key) {
+  mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+}
+
+NavigationMapping rightPress = { 37,  0,   0, pressRight, releaseRight, NULL, NULL };
+NavigationMapping leftPress  = { 36,  0,   0, pressLeft, releaseLeft, NULL, &rightPress };
+NavigationMapping downScroll = { 24, 33,   0, scrollDown, NULL, NULL, &leftPress };
+NavigationMapping upScroll   = { 23, 33,   0, scrollUp, NULL, NULL, &downScroll };
+NavigationMapping rightFast  = { 34, 33, 100, moveRight, NULL, NULL, &upScroll };
+NavigationMapping downFast   = { 19, 33, 100, moveDown, NULL, NULL, &rightFast };
+NavigationMapping leftFast   = { 30, 33, 100, moveLeft, NULL, NULL, &downFast };
+NavigationMapping upFast     = { 17, 33, 100, moveUp, NULL, NULL, &leftFast };
+NavigationMapping rightSlow  = { 33, 33,  25, moveRight, NULL, NULL, &upFast };
+NavigationMapping downSlow   = { 32, 33,  25, moveDown, NULL, NULL, &rightSlow };
+NavigationMapping leftSlow   = { 31, 33,  25, moveLeft, NULL, NULL, &downSlow };
+NavigationMapping upSlow     = { 18, 33,  25, moveUp, NULL, NULL, &leftSlow };
+
+NavigationMapping *mapping = &upSlow;
+
+void createTimerIfndef(NavigationMapping *key) {
+  if (!key->timer) {
+    if (!CreateTimerQueueTimer(&key->timer, NULL, (WAITORTIMERCALLBACK)key->timerEvent, key, 0, key->period, 0)) {
+      printf("!!! timer creation failed: %d\n", GetLastError());
     }
   }
 }
 
+void deleteTimerIfdef(NavigationMapping *key) {
+  if (key->timer) {
+    if (!DeleteTimerQueueTimer(NULL, key->timer, NULL)) {
+      printf("!!! timer deletion failed: %d\n", GetLastError());
+    }
+    key->timer = NULL;
+  }
+}
 
+void resetMouseNavigationState() {
+  for (NavigationMapping *m = mapping; m != NULL; m = m->n) {
+    deleteTimerIfdef(m);
+  }
+}
 
 bool navigateMouse(KBDLLHOOKSTRUCT keyInfo) {
   bool isKeyUp = keyInfo.flags & LLKHF_UP;
-  // int slow = (modStates.shift.leftIsPressed || modStates.shift.rightIsPressed) ? 4 : 25;
-  // int fast = 250;
+  int slow = (modStates.shift.leftIsPressed || modStates.shift.rightIsPressed) ? 4 : 25;
 
-  NavigationKey *curr = NULL;
+  NavigationMapping *curr = NULL;
 	for (curr = mapping; curr && curr->scan != keyInfo.scanCode; curr = curr->n);
 
+  // ignore if we don't have a mapping for this key
   if (curr == NULL) return false;
 
-  curr->isPressed = !isKeyUp;
-  curr->sendEvent(isKeyUp, curr->amount);
-
-  for (NavigationKey *m = mapping; m != NULL; m = m->n) {
-    if (m == curr) continue;
-    if (m->isPressed && m->repeatPresses)
-      m->sendEvent(false, m->amount);
+  if (!isKeyUp) {
+    createTimerIfndef(curr);
+  } else {
+    deleteTimerIfdef(curr);
+    if (curr->releaseEvent) curr->releaseEvent(curr);
   }
 
   return true;

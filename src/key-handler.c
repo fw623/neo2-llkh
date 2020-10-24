@@ -501,14 +501,6 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level) {
 	// skip LCONTROL sent by pressing ALTGR
 	if (keyInfo.scanCode == 541) return true;
 
-	// handle mouse navigation
-	if (modStates.mod3.rightIsPressed && modStates.mod4.rightIsPressed) {
-		if (navigateMouse(keyInfo)) return -1;
-	} else {
-		resetMouseNavigationState();
-	}
-
-
 	logKeyEvent("key", keyInfo);
 	if (updateStatesAndWriteKey(keyInfo, level)) return true;
 
@@ -545,6 +537,15 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 
 	// remap keys and handle tapping
 	if (!bypassMode && dual_function_keys(&keyInfo)) return -1;
+
+	// handle mouse navigation
+	if (!bypassMode) {
+		if (modStates.mod3.rightIsPressed && modStates.mod4.rightIsPressed) {
+			if (navigateMouse(keyInfo)) return -1;
+		} else {
+			resetMouseNavigationState();
+		}
+	}
 
 	if (writeEvent(keyInfo, getLevel())) return -1;
 
