@@ -1,16 +1,5 @@
 #include "mouse.h"
 
-typedef struct NavigationMapping {
-  DWORD scan;
-  int period; // 0 ... only run once
-  int value;
-  int shiftedValue; // value when shift is active
-  void (*timerEvent)(const struct NavigationMapping *key); // gets attached to timer
-  void (*releaseEvent)(const struct NavigationMapping *key); // gets called on key release
-  HANDLE timer;
-  struct NavigationMapping *n;
-} NavigationMapping;
-
 int getValue(const NavigationMapping *key) {
   volatile NeoModState *shift = &modStates.shift;
   bool shiftIsActive = (shift->leftIsPressed || shift->rightIsPressed) != shift->isLocked;
@@ -65,11 +54,11 @@ void releaseRight(const NavigationMapping *key) {
   mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
 }
 
-NavigationMapping rightPress  = { 37,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
-NavigationMapping middlePress = { 38,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
+NavigationMapping rightPress  = { 38,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
+NavigationMapping middlePress = { 37,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
 NavigationMapping leftPress   = { 36,  0,   0,   0, pressLeft, releaseLeft, NULL, &middlePress };
-NavigationMapping downScroll  = { 24, 33,   1,   1, scrollDown, NULL, NULL, &leftPress };
-NavigationMapping upScroll    = { 23, 33,   1,   1, scrollUp, NULL, NULL, &downScroll };
+NavigationMapping downScroll  = { 39, 33,   1,   1, scrollDown, NULL, NULL, &leftPress };
+NavigationMapping upScroll    = { 24, 33,   1,   1, scrollUp, NULL, NULL, &downScroll };
 NavigationMapping rightFast   = { 34, 33, 100, 100, moveRight, NULL, NULL, &upScroll };
 NavigationMapping downFast    = { 19, 33, 100, 100, moveDown, NULL, NULL, &rightFast };
 NavigationMapping leftFast    = { 30, 33, 100, 100, moveLeft, NULL, NULL, &downFast };
