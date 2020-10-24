@@ -1,9 +1,10 @@
 #include "mouse.h"
 
+DWORD slowKeyScan = SCAN_P;
+volatile bool slowKeyPressed = false;
+
 int getValue(const NavigationMapping *key) {
-  volatile NeoModState *shift = &modStates.shift;
-  bool shiftIsActive = (shift->leftIsPressed || shift->rightIsPressed) != shift->isLocked;
-  return shiftIsActive ? key->shiftedValue : key->value;
+  return slowKeyPressed ? key->slowValue : key->value;
 }
 
 void moveUp(const NavigationMapping *key) {
@@ -23,11 +24,11 @@ void moveRight(const NavigationMapping *key) {
 }
 
 void scrollUp(const NavigationMapping *key) {
-  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA * getValue(key), 0);
+  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, getValue(key), 0);
 }
 
 void scrollDown(const NavigationMapping *key) {
-  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA * getValue(key), 0);
+  mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -getValue(key), 0);
 }
 
 void pressLeft(const NavigationMapping *key) {
@@ -54,15 +55,15 @@ void releaseRight(const NavigationMapping *key) {
   mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
 }
 
-NavigationMapping rightPress  = { SCAN_K,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
-NavigationMapping middlePress = { SCAN_L,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
+NavigationMapping rightPress  = { SCAN_M,  0,   0,   0, pressRight, releaseRight, NULL, NULL };
+NavigationMapping middlePress = { SCAN_N,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &rightPress };
 NavigationMapping leftPress   = { SCAN_J,  0,   0,   0, pressLeft, releaseLeft, NULL, &middlePress };
-NavigationMapping downScroll  = { SCAN_O, 33,   1,   1, scrollDown, NULL, NULL, &leftPress };
-NavigationMapping upScroll    = { SCAN_I, 33,   1,   1, scrollUp, NULL, NULL, &downScroll };
-NavigationMapping rightFast   = { SCAN_G, 33, 100, 100, moveRight, NULL, NULL, &upScroll };
-NavigationMapping downFast    = { SCAN_R, 33, 100, 100, moveDown, NULL, NULL, &rightFast };
-NavigationMapping leftFast    = { SCAN_A, 33, 100, 100, moveLeft, NULL, NULL, &downFast };
-NavigationMapping upFast      = { SCAN_W, 33, 100, 100, moveUp, NULL, NULL, &leftFast };
+NavigationMapping downScroll  = { SCAN_K, 50, 140,  70, scrollDown, NULL, NULL, &leftPress };
+NavigationMapping upScroll    = { SCAN_I, 50, 140,  70, scrollUp, NULL, NULL, &downScroll };
+NavigationMapping rightFast   = { SCAN_G, 33, 120,  60, moveRight, NULL, NULL, &upScroll };
+NavigationMapping downFast    = { SCAN_R, 33, 120,  60, moveDown, NULL, NULL, &rightFast };
+NavigationMapping leftFast    = { SCAN_A, 33, 120,  60, moveLeft, NULL, NULL, &downFast };
+NavigationMapping upFast      = { SCAN_W, 33, 120,  60, moveUp, NULL, NULL, &leftFast };
 NavigationMapping rightSlow   = { SCAN_F, 33,  25,   4, moveRight, NULL, NULL, &upFast };
 NavigationMapping downSlow    = { SCAN_D, 33,  25,   4, moveDown, NULL, NULL, &rightSlow };
 NavigationMapping leftSlow    = { SCAN_S, 33,  25,   4, moveLeft, NULL, NULL, &downSlow };
@@ -94,13 +95,22 @@ void resetMouseNavigationState() {
 }
 
 bool navigateMouse(KBDLLHOOKSTRUCT keyInfo) {
+  bool isKeyUp = keyInfo.flags & LLKHF_UP;
+
+  // update slowKey status
+  if (keyInfo.scanCode == slowKeyScan) {
+    slowKeyPressed = !isKeyUp;
+    return true;
+  }
+
+  // find mapping of pressed key
   NavigationMapping *curr = NULL;
 	for (curr = mapping; curr && curr->scan != keyInfo.scanCode; curr = curr->n);
 
   // ignore if we don't have a mapping for this key
   if (curr == NULL) return false;
 
-  if (!(keyInfo.flags & LLKHF_UP)) {
+  if (!isKeyUp) {
     createTimerIfndef(curr);
   } else {
     deleteTimerIfdef(curr);

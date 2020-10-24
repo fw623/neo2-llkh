@@ -15,7 +15,7 @@ typedef struct NavigationMapping {
   DWORD scan;
   int period; // 0 ... only run once
   int value;
-  int shiftedValue; // value when shift is active
+  int slowValue; // value when slowKey is pressed
   void (*timerEvent)(const struct NavigationMapping *key); // gets attached to timer
   void (*releaseEvent)(const struct NavigationMapping *key); // gets called on key release
   HANDLE timer;
