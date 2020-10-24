@@ -7,8 +7,8 @@ bool qwertzForShortcuts = false;
 bool supportLevels5and6 = false;
 
 Mapping dfkCtrlL = {
-	.key = { VK_LCONTROL, 29 },
-	.hold = { VK_LWIN, 91, true },
+	.key = { VK_LCONTROL, SCAN_CTRL },
+	.hold = { VK_LWIN, SCAN_LWIN, true },
 	.tap = NULL,
 	.state = RELEASED,
 	.changed = 0,
@@ -16,8 +16,8 @@ Mapping dfkCtrlL = {
 };
 
 Mapping dfkWinL = {
-	.key = { VK_LWIN, 91 },
-	.hold = { VK_LMENU, 56, false },
+	.key = { VK_LWIN, SCAN_LWIN },
+	.hold = { VK_LMENU, SCAN_ALT, false },
 	.tap = NULL,
 	.state = RELEASED,
 	.changed = 0,
@@ -25,35 +25,35 @@ Mapping dfkWinL = {
 };
 
 Mapping dfkAltL = {
-	.key = { VK_LMENU, 56 },
-	.hold = { VK_LCONTROL, 29, false },
-	.tap = &(Tap){ { VK_ESCAPE, 1, false }, NULL },
+	.key = { VK_LMENU, SCAN_ALT },
+	.hold = { VK_LCONTROL, SCAN_CTRL, false },
+	.tap = &(Tap){ { VK_ESCAPE, SCAN_ESC, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = &dfkWinL
 };
 
 Mapping dfkAltGr = {
-	.key = { VK_RMENU, 56 },
-	.hold = { VK_RMENU, 56, true },
-	.tap = &(Tap){ { VK_RETURN, 28, false }, NULL },
+	.key = { VK_RMENU, SCAN_ALT },
+	.hold = { VK_RMENU, SCAN_ALT, true },
+	.tap = &(Tap){ { VK_RETURN, SCAN_RETURN, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = &dfkAltL
 };
 
 Mapping dfkAe = {
-	.key = { 0xDE, 40 },
-	.hold = { 0xBF, 43, false },
-	.tap = &(Tap){ { 0xDE, 40, false }, NULL },
+	.key = { 0xDE, SCAN_Ae },
+	.hold = { 0xBF, SCAN_Hash, false },
+	.tap = &(Tap){ { 0xDE, SCAN_Ae, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = &dfkAltGr
 };
 
 Mapping dfkLess = {
-	.key = { 0xE2, 86 },
-	.hold = { 0xE2, 86, false },
+	.key = { 0xE2, SCAN_Less },
+	.hold = { 0xE2, SCAN_Less, false },
 	.tap = &(Tap){ { VK_DELETE, 83, true }, NULL },
 	.state = RELEASED,
 	.changed = 0,
@@ -61,9 +61,9 @@ Mapping dfkLess = {
 };
 
 Mapping dfkCaps = {
-	.key = { VK_CAPITAL, 58 },
-	.hold = { VK_CAPITAL, 58, false },
-	.tap = &(Tap){ { VK_BACK, 14, false }, NULL },
+	.key = { VK_CAPITAL, SCAN_CAPS },
+	.hold = { VK_CAPITAL, SCAN_CAPS, false },
+	.tap = &(Tap){ { VK_BACK, SCAN_BACKSPACE, false }, NULL },
 	.state = RELEASED,
 	.changed = 0,
 	.n = &dfkLess
@@ -76,31 +76,31 @@ DfkConfig dfkConfig = {
 };
 
 SystemKey systemKey = {
-	.lCtrl = { VK_LCONTROL, 29 },
-	.lWin = { VK_LWIN, 91 },
-	.lAlt = { VK_LMENU, 56 },
-	.rAlt = { VK_RMENU, 56 },
-	.rWin = { VK_RWIN, 92 },
-	.rCtrl = { VK_RCONTROL, 29 }
+	.lCtrl = { VK_LCONTROL, SCAN_CTRL },
+	.lWin = { VK_LWIN, SCAN_LWIN },
+	.lAlt = { VK_LMENU, SCAN_ALT },
+	.rAlt = { VK_RMENU, SCAN_ALT },
+	.rWin = { VK_RWIN, SCAN_RWIN },
+	.rCtrl = { VK_RCONTROL, SCAN_CTRL }
 };
 
 ModConfig modConfig = {
 	.shift = {
 		.lock = NULL,
-		.left = { VK_LSHIFT, 42 },
-		.right = { VK_RSHIFT, 54 },
+		.left = { VK_LSHIFT, SCAN_LSHIFT },
+		.right = { VK_RSHIFT, SCAN_RSHIFT },
 		.bothLock = true
 	},
 	.mod3 = {
 		.lock = NULL,
-		.left = { VK_CAPITAL, 58 },
-		.right = { VK_RMENU, 56 },
+		.left = { VK_CAPITAL, SCAN_CAPS },
+		.right = { VK_RMENU, SCAN_ALT },
 		.bothLock = false
 	},
 	.mod4 = {
-		.lock = &(InputKey){ VK_RCONTROL, 29 },
-		.left = { 0xE2, 86 }, // > key
-		.right = { 0xBF, 43 }, // # key
+		.lock = &(InputKey){ VK_RCONTROL, SCAN_CTRL },
+		.left = { 0xE2, SCAN_Less }, // > key
+		.right = { 0xBF, SCAN_Hash }, // # key
 		.bothLock = false
 	}
 };

@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <stdbool.h>
+#include "scancode.h"
 
 #define LEN 103
 

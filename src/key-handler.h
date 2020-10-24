@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "resources.h"
+#include "scancode.h"
 #include "config.h"
 #include "states.h"
 #include "tray-icon.h"

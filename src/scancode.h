@@ -1,3 +1,5 @@
+/* some basic scancodes of a german qwertz keyboard */
+
 #ifndef KEY_H_
 #define KEY_H_
 
@@ -14,9 +16,9 @@
 #define SCAN_LWIN 91
 #define SCAN_SPACE 57
 #define SCAN_RALT_CTRL 541 // altGr sends alt+lctrl (with different scancode)
+#define SCAN_RWIN 92
 
 // numrow
-#define SCAN_Hat 41
 #define SCAN_1 2
 #define SCAN_2 3
 #define SCAN_3 4
@@ -28,7 +30,6 @@
 #define SCAN_9 10
 #define SCAN_0 11
 #define SCAN_SSharp 12
-#define SCAN_Apo 13
 
 // top row
 #define SCAN_Q 16
@@ -45,17 +46,17 @@
 #define SCAN_Plus 27
 
 // home row
-#define SCAN_A 17
-#define SCAN_S 18
-#define SCAN_D 19
-#define SCAN_F 20
-#define SCAN_G 21
-#define SCAN_H 22
-#define SCAN_J 23
-#define SCAN_K 24
-#define SCAN_L 25
-#define SCAN_Oe 26
-#define SCAN_Ae 27
+#define SCAN_A 30
+#define SCAN_S 31
+#define SCAN_D 32
+#define SCAN_F 33
+#define SCAN_G 34
+#define SCAN_H 35
+#define SCAN_J 36
+#define SCAN_K 37
+#define SCAN_L 38
+#define SCAN_Oe 39
+#define SCAN_Ae 40
 #define SCAN_Hash 43
 
 // bot row

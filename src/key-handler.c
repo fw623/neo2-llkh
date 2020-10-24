@@ -7,14 +7,6 @@
 
 #include "key-handler.h"
 
-#define SCANCODE_TAB_KEY 15
-#define SCANCODE_CAPSLOCK_KEY 58
-#define SCANCODE_LOWER_THAN_KEY 86 // <
-#define SCANCODE_QUOTE_KEY 40      // Ä
-#define SCANCODE_HASH_KEY 43       // #
-#define SCANCODE_RETURN_KEY 28
-#define SCANCODE_ANY_ALT_KEY 56        // Alt or AltGr
-
 /**
  * Map a key scancode to the char that should be displayed after typing
  **/
@@ -499,7 +491,7 @@ bool writeEvent(const KBDLLHOOKSTRUCT keyInfo, unsigned level) {
 	}
 
 	// skip LCONTROL sent by pressing ALTGR
-	if (keyInfo.scanCode == 541) return true;
+	if (keyInfo.scanCode == SCAN_RALT_CTRL) return true;
 
 	logKeyEvent("key", keyInfo);
 	if (updateStatesAndWriteKey(keyInfo, level)) return true;
