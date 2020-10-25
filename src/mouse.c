@@ -1,5 +1,7 @@
 #include "mouse.h"
 
+#define SCREEN_WIDTH 2560
+
 volatile bool slowKeyPressed = false;
 volatile bool fastKeyPressed = false;
 
@@ -24,10 +26,12 @@ void releaseRight  (const NavigationMapping *key) { mouse_event(MOUSEEVENTF_RIGH
 
 DWORD slowKeyScan = SCAN_P;
 DWORD fastKeyScan = SCAN_Oe;
-NavigationMapping mappingMoveUp      = { SCAN_E, 7, 1,  6,  30,      moveUp,          NULL, NULL, NULL                };
-NavigationMapping mappingMoveDown    = { SCAN_D, 7, 1,  6,  30,    moveDown,          NULL, NULL, &mappingMoveUp      };
-NavigationMapping mappingMoveLeft    = { SCAN_S, 7, 1,  6,  30,    moveLeft,          NULL, NULL, &mappingMoveDown    };
-NavigationMapping mappingMoveRight   = { SCAN_F, 7, 1,  6,  30,   moveRight,          NULL, NULL, &mappingMoveLeft    };
+NavigationMapping mappingJumpLeft    = { SCAN_A, 0, SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_WIDTH, moveLeft,  NULL, NULL, NULL             };
+NavigationMapping mappingJumpRight   = { SCAN_G, 0, SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_WIDTH, moveRight, NULL, NULL, &mappingJumpLeft };
+NavigationMapping mappingMoveUp      = { SCAN_E, 7, 1,  6,  25,      moveUp,          NULL, NULL, &mappingJumpRight   };
+NavigationMapping mappingMoveDown    = { SCAN_D, 7, 1,  6,  25,    moveDown,          NULL, NULL, &mappingMoveUp      };
+NavigationMapping mappingMoveLeft    = { SCAN_S, 7, 1,  6,  25,    moveLeft,          NULL, NULL, &mappingMoveDown    };
+NavigationMapping mappingMoveRight   = { SCAN_F, 7, 1,  6,  25,   moveRight,          NULL, NULL, &mappingMoveLeft    };
 NavigationMapping mappingScrollUp    = { SCAN_I, 7, 5, 25, 150,    scrollUp,          NULL, NULL, &mappingMoveRight   };
 NavigationMapping mappingScrollDown  = { SCAN_K, 7, 5, 25, 150,  scrollDown,          NULL, NULL, &mappingScrollUp    };
 NavigationMapping mappingPressLeft   = { SCAN_J, 0, 0,  0,   0,   pressLeft,   releaseLeft, NULL, &mappingScrollDown  };
