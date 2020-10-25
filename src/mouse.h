@@ -8,14 +8,15 @@
 #include "config.h"
 #include "key-handler.h"
 
-void resetMouseNavigationState();
-bool navigateMouse(KBDLLHOOKSTRUCT keyInfo);
+void resetNavigationState();
+bool handleNavigationLayer(KBDLLHOOKSTRUCT keyInfo);
 
 typedef struct NavigationMapping {
   DWORD scan;
   int period; // 0 ... only run once
+  int slowValue; // value when only slowKey is pressed
   int value;
-  int slowValue; // value when slowKey is pressed
+  int fastValue; // value when only fastKey is pressed
   void (*timerEvent)(const struct NavigationMapping *key); // gets attached to timer
   void (*releaseEvent)(const struct NavigationMapping *key); // gets called on key release
   HANDLE timer;

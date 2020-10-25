@@ -533,9 +533,9 @@ LRESULT CALLBACK keyevent(int code, WPARAM wparam, LPARAM lparam) {
 	// handle mouse navigation
 	if (!bypassMode) {
 		if (modStates.mod3.rightIsPressed && modStates.mod4.rightIsPressed) {
-			if (navigateMouse(keyInfo)) return -1;
+			if (handleNavigationLayer(keyInfo)) return -1;
 		} else {
-			resetMouseNavigationState();
+			resetNavigationState();
 		}
 	}
 
