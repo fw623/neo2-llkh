@@ -24,15 +24,15 @@ void releaseRight  (const NavigationMapping *key) { mouse_event(MOUSEEVENTF_RIGH
 
 DWORD slowKeyScan = SCAN_P;
 DWORD fastKeyScan = SCAN_Oe;
-NavigationMapping mappingMoveUp      = { SCAN_E, 33,  4,  25, 150,      moveUp,          NULL, NULL, NULL                };
-NavigationMapping mappingMoveDown    = { SCAN_D, 33,  4,  25, 150,    moveDown,          NULL, NULL, &mappingMoveUp      };
-NavigationMapping mappingMoveLeft    = { SCAN_S, 33,  4,  25, 150,    moveLeft,          NULL, NULL, &mappingMoveDown    };
-NavigationMapping mappingMoveRight   = { SCAN_F, 33,  4,  25, 150,   moveRight,          NULL, NULL, &mappingMoveLeft    };
-NavigationMapping mappingScrollUp    = { SCAN_I, 50, 70, 140, 500,    scrollUp,          NULL, NULL, &mappingMoveRight   };
-NavigationMapping mappingScrollDown  = { SCAN_K, 50, 70, 140, 500,  scrollDown,          NULL, NULL, &mappingScrollUp    };
-NavigationMapping mappingPressLeft   = { SCAN_J,  0,  0,   0,   0,   pressLeft,   releaseLeft, NULL, &mappingScrollDown  };
-NavigationMapping mappingPressMiddle = { SCAN_N,  0,  0,   0,   0, pressMiddle, releaseMiddle, NULL, &mappingPressLeft   };
-NavigationMapping mappingPressRight  = { SCAN_M,  0,  0,   0,   0,  pressRight,  releaseRight, NULL, &mappingPressMiddle };
+NavigationMapping mappingMoveUp      = { SCAN_E, 7, 1,  6,  30,      moveUp,          NULL, NULL, NULL                };
+NavigationMapping mappingMoveDown    = { SCAN_D, 7, 1,  6,  30,    moveDown,          NULL, NULL, &mappingMoveUp      };
+NavigationMapping mappingMoveLeft    = { SCAN_S, 7, 1,  6,  30,    moveLeft,          NULL, NULL, &mappingMoveDown    };
+NavigationMapping mappingMoveRight   = { SCAN_F, 7, 1,  6,  30,   moveRight,          NULL, NULL, &mappingMoveLeft    };
+NavigationMapping mappingScrollUp    = { SCAN_I, 7, 5, 25, 150,    scrollUp,          NULL, NULL, &mappingMoveRight   };
+NavigationMapping mappingScrollDown  = { SCAN_K, 7, 5, 25, 150,  scrollDown,          NULL, NULL, &mappingScrollUp    };
+NavigationMapping mappingPressLeft   = { SCAN_J, 0, 0,  0,   0,   pressLeft,   releaseLeft, NULL, &mappingScrollDown  };
+NavigationMapping mappingPressMiddle = { SCAN_N, 0, 0,  0,   0, pressMiddle, releaseMiddle, NULL, &mappingPressLeft   };
+NavigationMapping mappingPressRight  = { SCAN_M, 0, 0,  0,   0,  pressRight,  releaseRight, NULL, &mappingPressMiddle };
 
 NavigationMapping *mapping = &mappingPressRight;
 
@@ -46,7 +46,8 @@ void createTimerIfndef(NavigationMapping *key) {
 
 void deleteTimerIfdef(NavigationMapping *key) {
   if (key->timer) {
-    if (!DeleteTimerQueueTimer(NULL, key->timer, NULL)) {
+    // note: use INVALID_HANDLE_VALUE so it completes running callbacks
+    if (!DeleteTimerQueueTimer(NULL, key->timer, INVALID_HANDLE_VALUE)) {
       printf("!!! timer deletion failed: %d\n", GetLastError());
     }
     key->timer = NULL;
